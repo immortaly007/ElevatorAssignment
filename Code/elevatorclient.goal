@@ -50,11 +50,6 @@ event module{
 		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
 		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do send(manager, atFloor(Level) ) + insert( atFloor(Level) ).
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
-				
-		% The doorState percept is received only if the door state has changed.
-		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
-		forall bel( percept(doorState(New)), doorState(Old) ) do insert( not(doorState(Old)), doorState(New) ).
-		forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) ).
 		
 		% Send to the manager where the client wants to go
 		forall bel( percept(eButtonOn(Level)), dir(Dir) ) do send( manager, wannaGo(Level), dir(Dir) ).
