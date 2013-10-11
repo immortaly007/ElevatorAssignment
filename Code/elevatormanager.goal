@@ -30,9 +30,14 @@ main module{
 
 event module{
 	program{
-		if bel(received(A, fButtonOn(Level, Dir))) then insert(fButtonOn(Level, Dir)).
-		if bel(received(A, delFButtonOn(Level, Dir))) then delete(fButtonOn(Level, Dir)).
-		% insert action rules here.
+		% fButtonOn processing (independent of elevator/client)
+	    forall bel( received(A, fButtonOn(Level, Dir)) ) do insert( fButtonOn(Level, Dir) ) + delete( reveiced(A, fButtonOn(Level, Dir)) ).
+		forall bel( received(A, delFButtonOn(Level, Dir)) ) do insert delete( fButtonOn(Level, Dir), received(fButtonOn(Level, Dir)) ).
+		
+		forall bel( received(A, atFloor(Level)), elevatorAtFloor(A, Level2) ) do insert( elevatorAtFloor(A, Level)) + delete(elevatorAtFloor(A, Level2), reveived(A, atFloor(Level))).
+		forall bel( received(A, atFloor(Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(reveived(A, atFloor(Level))).
+
+		
 	}
 }
 
