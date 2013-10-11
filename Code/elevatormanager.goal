@@ -30,6 +30,8 @@ main module{
 
 event module{
 	program{
+		if bel(received(A, fButtonOn(Level, Dir))) then insert(fButtonOn(Level, Dir)).
+		if bel(received(A, delFButtonOn(Level, Dir))) then delete(fButtonOn(Level, Dir)).
 		% insert action rules here.
 	}
 }
