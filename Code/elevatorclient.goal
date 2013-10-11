@@ -1,0 +1,62 @@
+init module {
+	knowledge{
+		% insert knowledge here, if any, or remove section.
+	}
+	
+	beliefs{
+		% The direction that will be shown to the people at the next stop.
+		% This remains the intended direction of movement until there are no more
+		% planned stops in that direction.
+		dir(down).
+		% Initially, it is unknown whether doors are open or closed.
+		doorState(unknown).
+	}
+	
+	goals{
+		% insert initial goals here, if any, or remove section.
+	}
+	
+	program {
+        % insert one-time rules here, or remove section
+    }
+	
+	actionspec{
+		% insert global action specification here, if any, or remove section.
+	}
+}
+	
+main module{
+	program{
+		% insert action rules here.
+		if bel(received(manager,goto(X,DIR))) then adopt(atFloor(X)).
+		
+		% Goto the nearest floor that the agent wants to go to.
+		if a-goal( atFloor(Level), dir(Dir) ),
+			bel( atFloor(Here), Distance is abs(Level-Here) ),
+		    not(a-goal( atFloor(OtherLevel),
+				OtherDistance is abs(OtherLevel-Here), OtherDistance<Distance) )
+		then goto(Level, Dir).
+	}
+}
+
+event module{
+	program{
+				%%%%% Percept Processing %%%%%
+		
+		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
+		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do insert( atFloor(Level) ).
+		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
+				
+		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
+		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do insert( fButtonOn(Level,Dir) ).
+		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do delete( fButtonOn(Level,Dir) ).
+		
+		% The doorState percept is received only if the door state has changed.
+		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
+		forall bel( percept(doorState(New)), doorState(Old) ) do insert( not(doorState(Old)), doorState(New) ).
+		
+		
+	}
+}
+
+% insert additional modules, if any, here.

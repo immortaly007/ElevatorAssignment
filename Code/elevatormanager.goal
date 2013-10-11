@@ -23,6 +23,8 @@ init module {
 main module{
 	program{
 		% insert action rules here.
+		if bel(agent(A))
+			then send(A,goto(8,DIR)).
 	}
 }
 

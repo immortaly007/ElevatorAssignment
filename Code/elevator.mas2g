@@ -2,7 +2,7 @@ environment {
  env = "elevatorenv.jar".
  init = [
 	Simulation = "Random Rider Insertion", 
-	Floors = 10, Cars = 3,
+	Floors = 20, Cars = 6,
 	RandomSeed=635359, Capacity=8, People=20, 
 	InsertionTime=50000, 
 	TimeFactor = 0, Controller = "GOAL Controller",
@@ -13,9 +13,12 @@ environment {
 
 agentfiles {
 	"elevatoragent.goal" [name=file1] .
-}
+	"elevatormanager.goal" [name=manager] .
+	"elevatorclient.goal" [name=client] .
+}                             
 
 launchpolicy {
-    when [type=car,max=3]@env do launch elevator:file1 .
+	launch manager:manager.
+    when [type=car,max=6]@env do launch elevator:client .
 }
 
