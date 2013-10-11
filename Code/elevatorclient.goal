@@ -48,20 +48,16 @@ event module{
 				%%%%% Percept Processing %%%%%
 		
 		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
-		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do send(manager, atFloor(Level) ).
-		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do insert( atFloor(Level) ).
+		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do send(manager, atFloor(Level) ) +  insert( atFloor(Level) ).
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 				
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
-		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) ).
-		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do insert( fButtonOn(Level,Dir) ).
-		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do delete( fButtonOn(Level,Dir) ).
-		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do send( manager, delFButtonOn(Level, Dir) ).
+		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
+		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do send( manager, delFButtonOn(Level, Dir) )+delete( fButtonOn(Level,Dir) ).
 		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
-		forall bel( percept(doorState(New)), doorState(Old) ) do insert( not(doorState(Old)), doorState(New) ).
-		forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) ).
+		forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) )+insert( not(doorState(Old)), doorState(New) ).
 	
 		
 	}
