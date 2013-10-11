@@ -35,7 +35,7 @@ init module {
 main module{
 	program{
 		%%%%%% Goal Management %%%%%%
-		if bel(received(manager,goto(X,DIR))) then adopt(atFloor(X), dir(DIR)).
+		if bel(received(manager,goto(X,DIR))) then adopt(atFloor(X), dir(DIR))+delete(received(manager,goto(X,DIR))).
 		
 		% Goto the nearest floor that the agent wants to go to.
 		if a-goal( atFloor(Level), dir(Dir)) then goto(Level, Dir).
