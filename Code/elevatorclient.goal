@@ -21,21 +21,21 @@ init module {
     }
 	
 	actionspec{
-		% insert global action specification here, if any, or remove section.
+		% The action goto(Level, Dir) moves the elevator car to floor Level. It can
+		% only be performed if the elevator car is docked and not moving, i.e.,
+		% atFloor(Here) holds for some Here.
+		% When the elevator arrives at the requested floor, the Dir light will turn on.
+		goto(Level, Dir) {
+		   pre{ atFloor(Here), dir(DirNow) }
+		   post{ not(dir(DirNow)), dir(Dir) }
+		}
 	}
 }
 	
 main module{
 	program{
-		% insert action rules here.
-		if bel(received(manager,goto(X,DIR))) then adopt(atFloor(X)).
-		
 		% Goto the nearest floor that the agent wants to go to.
-		if a-goal( atFloor(Level), dir(Dir) ),
-			bel( atFloor(Here), Distance is abs(Level-Here) ),
-		    not(a-goal( atFloor(OtherLevel),
-				OtherDistance is abs(OtherLevel-Here), OtherDistance<Distance) )
-		then goto(Level, Dir).
+		if a-goal( atFloor(Level), dir(Dir)) then goto(Level, Dir).
 	}
 }
 
@@ -55,6 +55,9 @@ event module{
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
 		forall bel( percept(doorState(New)), doorState(Old) ) do insert( not(doorState(Old)), doorState(New) ).
 		
+		%%%%%% Goal Management
+		
+		if bel(received(manager,goto(X,DIR))) then adopt(atFloor(X), dir(DIR)).
 		
 	}
 }
