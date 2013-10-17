@@ -2,8 +2,8 @@ environment {
  env = "elevatorenv.jar".
  init = [
 	Simulation = "Random Rider Insertion", 
-	Floors = 20, Cars = 6,
-	RandomSeed=635359, Capacity=8, People=20, 
+	Floors = 10, Cars = 3,
+	RandomSeed=6353, Capacity=8, People=20, 
 	InsertionTime=50000, 
 	TimeFactor = 0, Controller = "GOAL Controller",
 	InsertionTimeHr = 0.3, StandardDev = 1,
@@ -13,7 +13,7 @@ environment {
 
 agentfiles {
 	"elevatoragent.goal" [name=file1] .
-	"elevatormanager.goal" [name=manager] .
+	"cnpmgr.goal" [name=manager] .
 	"elevatorclient.goal" [name=client] .
 }                             
 

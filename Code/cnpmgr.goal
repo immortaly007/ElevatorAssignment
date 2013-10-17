@@ -1,0 +1,49 @@
+init module {
+	knowledge{
+		% insert knowledge here, if any, or remove section.
+	}
+	
+	beliefs{
+		% insert initial beliefs here, if any, or remove section.
+	}
+	
+	goals{
+		% insert initial goals here, if any, or remove section.
+	}
+	
+	program {
+        % insert one-time rules here, or remove section
+    }
+	
+	actionspec{
+		% insert global action specification here, if any, or remove section.
+	}
+}
+	
+main module{
+	program{
+		% insert action rules here.
+		if bel(agent(A))
+			then send(A,goto(8, up)).
+	}
+}
+
+event module{
+	program{
+		% Receive and save the location of the clients to the believe base
+		forall bel( received(A, atFloor(Level)), elevatorAtFloor(A, Level2) ) do insert( elevatorAtFloor(A, Level)) + delete(elevatorAtFloor(A, Level2), reveived(A, atFloor(Level))).
+		forall bel( received(A, atFloor(Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(reveived(A, atFloor(Level)) ).
+
+		% Receive and save what button the client pressed (eButtonPressed)
+		forall bel( received(A,  wannaGo(Level)) ) do insert( clientWantsToGo(A, Level) ) + delete( receeived(A, wannaGo(Level)) ).
+		
+	    % fButtonOn processing (independent of elevator/client)
+	    forall bel( received(A, fButtonOn(Level, Dir)) ) do insert( fButtonOn(Level, Dir) ) + delete( reveiced(A, fButtonOn(Level, Dir)) ).
+		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(delFButtonOn(Level, Dir)) ).
+		
+		% Process the doorstate for each client
+		forall bel( received(A, doorState(New)), elevatorDoorState(A, Old) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
+	}
+}
+
+% insert additional modules, if any, here.

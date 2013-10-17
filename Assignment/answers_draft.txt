@@ -1,0 +1,11 @@
+Part A:
+ 1. Done
+ 2. Done
+ 3. The first percept all elevators receive is to go to floor 9. Since they have no goals, the following line is found:
+    		if bel( atFloor(Any) ), not(goal( atFloor(AnyL) )), bel( fButtonOn(L,D), doorState(closed) )
+			then adopt( atFloor(L), dir(D) ).
+    Then the program in the main module kicks in and starts the action goto(9) for all three agents at the same time.
+ 4. It sais in the post condition of goto that the dir needs to be inverted, and the current dir is just added to the goal.
+ 
+Part B:
+ 1. 
