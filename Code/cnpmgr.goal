@@ -3,7 +3,9 @@ init module {
 		% insert knowledge here, if any, or remove section.
 		onRoute(A, Level, Dir) :- elevatorAtFloor(A, Here), elevatorDir(A, Dir), Diff is Level-Here, (Diff<0 -> Dir=down; Dir=up).
 		
-		somethingInteresting(A, Level, Dir)  :- agent(A), ((fButtonOn(Level, Dir), not(moving(_, _, Level))); clientWantsToGo(A, Level, _)). 
+		%somethingInteresting(A, Level, Dir)  :- agent(A), ((fButtonOn(Level, Dir), not(moving(_, _, Level))); clientWantsToGo(A, Level, _)). 
+		
+		elevatorAtFloor(Level, Dir) :- elevatorAtFloor(_, Level, Dir).
 	}
 	
 	beliefs{
@@ -37,11 +39,13 @@ main module{
 			
 		forall bel(sendGoto(A, Level, Dir)) do send( A, goto(Level, Dir) ) + delete( sendGoto(A, Level, Dir) ).
 	    
-		%if bel ( fButtonOn(Level, Dir), not(moving(_, _, Level)) ) then sendElevator(A, Level, Dir).
-		
+		%if bel ( fButtonOn(Level, Dir), not(moving(_, Dir, Level)) ) then sendElevator(A, Level, Dir).
 		%if bel ( clientWantsToGo(A, Level, Dir), elevatorAtFloor(A, Level2) ) then sendElevator(A, Level, Dir) + delete(clientWantsToGo(A, Level, Dir) ).
 		
-		if bel (somethingInteresting(A, Level, Dir) ) then sendElevator(A, Level, Dir). 
+		%if bel (somethingInteresting(A, Level, Dir) ) then sendElevator(A, Level, Dir). 
+		
+		if a-goal(elevatorAtFloor(A, Level, Dir)) then sendElevator(A, Level, Dir).
+		if a-goal(elevatorAtFloor(Level, Dir)), bel(not(moving(_, Dir, Level)) ) then sendElevator(A, Level, Dir).
 		
 	}
 }
@@ -70,7 +74,13 @@ main module{
 		forall bel( received(A, dir(Dir)) ) do insert(elevatorDir(A, Dir) ) + delete(received(elevatorDir(A, Dir) ) ).
 		forall bel( received(A, dir(Dir)), elevatorDir(A, Dir2) ) do insert(elevatorDir(A, Dir) ) + delete(received(elevatorDir(A, Dir) ), elevatorDir(A, Dir2) ).
 		
-		forall bel( elevatorAtFloor(A, Level), clientWantsToGo(A, Level, Dir), elevatorDoorState(A, opened) ) do delete(clientWantsToGo(A, Level, Dir)) .
+		forall bel( elevatorAtFloor(A, Level), clientWantsToGo(A, Level, _), elevatorDoorState(A, opened) ) do delete(clientWantsToGo(A, Level, _)) .
+		
+		
+		%%%%%%%%%%%% Goal Management %%%%%%%%%%%
+		forall bel( fButtonOn(Level, Dir) ) do adopt( elevatorAtFloor(Level, Dir)) .
+		forall bel( clientWantsToGo(A, Level, Dir) ) do adopt( elevatorAtFloor(A, Level, Dir) ). 
+		
 	}
 }
 
