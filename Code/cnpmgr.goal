@@ -1,10 +1,14 @@
 init module {
 	knowledge{
 		% insert knowledge here, if any, or remove section.
+		onRoute(A, Level, Dir) :- elevatorAtFloor(A, Here), elevatorDir(A, Dir), Diff is Level-Here, (Diff<0 -> Dir=down; Dir=up).
+		
+		somethingInteresting(A, Level, Dir)  :- agent(A), ((fButtonOn(Level, Dir), not(moving(_, _, Level))); clientWantsToGo(A, Level, _)). 
 	}
 	
 	beliefs{
 		% insert initial beliefs here, if any, or remove section.
+		
 	}
 	
 	goals{
@@ -17,21 +21,39 @@ init module {
 	
 	actionspec{
 		% insert global action specification here, if any, or remove section.
+		sendElevator(A, Level, Dir)
+		{
+			pre { free(A), elevatorAtFloor(A, Level2), not(Level = Level2) }
+			post { not(free(A)), moving(A, Level2, Level), sendGoto(A, Level, Dir), not(elevatorAtFloor(A, Level2)) }
+		}
 	}
 }
 	
 main module{
 	program{
 		% insert action rules here.
-		if bel( agent(A), not(me(A)), not(sent(A, goto(8, up))) )
-			then send(A,goto(8, up)).
+		%if bel( agent(A), not(me(A)), not(sent(A, goto(8, up))), elevatorDoorState(A, closed), elevatorAtFloor(A, Level) )
+		%	then send(A,goto(8, up)) + insert(moving(A, Level, 8) ) + delete( elevatorAtFloor(A, Level) ).
 			
-		% Receive and save the location of the clients to the believe base
-		forall bel( received(A, atFloor(Level)), elevatorAtFloor(A, Level2), not(Level = Level2) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), elevatorAtFloor(A, Level2) ).
-		forall bel( received(A, atFloor(Level)), not(elevatorAtFloor(A, Level2)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
+		forall bel(sendGoto(A, Level, Dir)) do send( A, goto(Level, Dir) ) + delete( sendGoto(A, Level, Dir) ).
+	    
+		%if bel ( fButtonOn(Level, Dir), not(moving(_, _, Level)) ) then sendElevator(A, Level, Dir).
+		
+		%if bel ( clientWantsToGo(A, Level, Dir), elevatorAtFloor(A, Level2) ) then sendElevator(A, Level, Dir) + delete(clientWantsToGo(A, Level, Dir) ).
+		
+		if bel (somethingInteresting(A, Level, Dir) ) then sendElevator(A, Level, Dir). 
+		
+	}
+}
+
+ event module{
+	 program{		 
+ 		% Receive and save the location of the clients to the believe base
+		forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
+		forall bel( received(A, atFloor(Level)), not(moving(A, Level2, Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
 
 		% Receive and save what button the client pressed (eButtonPressed)
-		forall bel( received(A,  wannaGo(Level, Dir)) ) do insert( clientWantsToGo(A, Level, Dir) ) + delete( received(A, wannaGo(Level, Dir)) ).
+		forall bel( received(A,  eButtonOn(Level, Dir)) ) do insert( clientWantsToGo(A, Level, Dir) ) + delete( received(A, eButtonOn(Level, Dir)) ).
 		
 	    % fButtonOn processing (independent of elevator/client)
 	    forall bel( received(A, fButtonOn(Level, Dir)) ) do insert( fButtonOn(Level, Dir) ) + delete( received(A, fButtonOn(Level, Dir)) ).
@@ -40,13 +62,16 @@ main module{
 		% Process the doorstate for each client
 		forall bel( received(A, doorState(New)), elevatorDoorState(A, Old), not(Old = New) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
 		forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
+		
+		% Process free agents
+		forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
+		
+		% Process directions
+		forall bel( received(A, dir(Dir)) ) do insert(elevatorDir(A, Dir) ) + delete(received(elevatorDir(A, Dir) ) ).
+		forall bel( received(A, dir(Dir)), elevatorDir(A, Dir2) ) do insert(elevatorDir(A, Dir) ) + delete(received(elevatorDir(A, Dir) ), elevatorDir(A, Dir2) ).
+		
+		forall bel( elevatorAtFloor(A, Level), clientWantsToGo(A, Level, Dir), elevatorDoorState(A, opened) ) do delete(clientWantsToGo(A, Level, Dir)) .
 	}
 }
-
-% event module{
-	% program{
-% 
-	% }
-% }
 
 % insert additional modules, if any, here.
