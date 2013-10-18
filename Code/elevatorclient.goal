@@ -52,7 +52,7 @@ event module{
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% Send to the manager where the client wants to go
-		forall bel( percept(eButtonOn(Level)), dir(Dir) ) do send( manager, wannaGo(Level), dir(Dir) ).
+		forall bel( percept(eButtonOn(Level)), dir(Dir) ) do send( manager, wannaGo(Level, Dir) ).
 
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
 		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).

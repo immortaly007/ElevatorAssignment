@@ -23,27 +23,30 @@ init module {
 main module{
 	program{
 		% insert action rules here.
-		if bel(agent(A))
+		if bel( agent(A), not(me(A)), not(sent(A, goto(8, up))) )
 			then send(A,goto(8, up)).
-	}
-}
-
-event module{
-	program{
+			
 		% Receive and save the location of the clients to the believe base
-		forall bel( received(A, atFloor(Level)), elevatorAtFloor(A, Level2) ) do insert( elevatorAtFloor(A, Level)) + delete(elevatorAtFloor(A, Level2), reveived(A, atFloor(Level))).
-		forall bel( received(A, atFloor(Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(reveived(A, atFloor(Level)) ).
+		forall bel( received(A, atFloor(Level)), elevatorAtFloor(A, Level2), not(Level = Level2) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), elevatorAtFloor(A, Level2) ).
+		forall bel( received(A, atFloor(Level)), not(elevatorAtFloor(A, Level2)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
 
 		% Receive and save what button the client pressed (eButtonPressed)
-		forall bel( received(A,  wannaGo(Level)) ) do insert( clientWantsToGo(A, Level) ) + delete( receeived(A, wannaGo(Level)) ).
+		forall bel( received(A,  wannaGo(Level, Dir)) ) do insert( clientWantsToGo(A, Level, Dir) ) + delete( received(A, wannaGo(Level, Dir)) ).
 		
 	    % fButtonOn processing (independent of elevator/client)
-	    forall bel( received(A, fButtonOn(Level, Dir)) ) do insert( fButtonOn(Level, Dir) ) + delete( reveiced(A, fButtonOn(Level, Dir)) ).
-		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(delFButtonOn(Level, Dir)) ).
+	    forall bel( received(A, fButtonOn(Level, Dir)) ) do insert( fButtonOn(Level, Dir) ) + delete( received(A, fButtonOn(Level, Dir)) ).
+		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(A, delFButtonOn(Level, Dir)) ).
 		
 		% Process the doorstate for each client
-		forall bel( received(A, doorState(New)), elevatorDoorState(A, Old) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
+		forall bel( received(A, doorState(New)), elevatorDoorState(A, Old), not(Old = New) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
+		forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
 	}
 }
+
+% event module{
+	% program{
+% 
+	% }
+% }
 
 % insert additional modules, if any, here.
