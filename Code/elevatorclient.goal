@@ -45,6 +45,10 @@ main module{
 event module{
 	program{
 		%%%%% Percept Processing %%%%%
+		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ).
+		forall bel( percept(people(N) )) do send(manager, people(N) ).
+		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) ).
+		forall bel( percept(carPosition(L) )) do send(manager, carPosition(L) ).
 		
 		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
 		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do send(manager, atFloor(Level) ) + insert( atFloor(Level) ).

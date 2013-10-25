@@ -11,6 +11,7 @@ init module {
 		elevatorAtFloor(any, Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
 		
 		readyToSend(A, Level, Level2) :- free(A), elevatorAtFloor(A, Level2), not(Level = Level2).
+		
 	}                                                                                                         
 	
 	
@@ -50,14 +51,24 @@ main module{
 		
 		%if bel (somethingInteresting(A, Level, Dir) ) then sendElevator(A, Level, Dir). 
 		
-		if a-goal(elevatorAtFloor(A, Level, Dir)), bel(readyToSend(A, Level, OldLevel)) then send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
-		if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, Dir, Level)), readyToSend(A, Level, OldLevel) ) then send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
-		
+		if a-goal(elevatorAtFloor(A, Level, Dir)), bel(readyToSend(A, Level, OldLevel)) then
+			send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
+		if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, OldLevel, Level)), readyToSend(A, Level, OldLevel) ) then 
+			send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
+
 	}
 }
 
  event module{
 	 program{		 
+		% Receive some constants and current states
+		forall bel( received(A,capacity(N) )) do insert( capacity(A,N) ) + delete( received(A,capacity(N)) ) .
+		forall bel( received(A,floorCount(N) )) do insert(floorCount(A,N) ) + delete(received(A,floorCount(N) )).
+		forall bel( received(A,people(N)), not(people(A, _))) do insert( people(A,N) )+delete(received(A,people(N))).
+		forall bel( received(A,people(N)), people(A, N2)) do insert ( people(A, N) ) + delete( people(A, N2),received(A,people(N)) ).
+		forall bel( received(A,carPosition(L) ), not(carPosition(A,_))) do insert(carPosition(A,L) )+delete(received(A,carPosition(L) )).
+		forall bel( received(A,carPosition(L) ), carPosition(A,L2)) do insert(carPosition(A,L) )+delete(received(A,carPosition(L) ),carPosition(A,L2)).
+		
  		% Receive and save the location of the clients to the believe base
 		forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
 		forall bel( received(A, atFloor(Level)), not(moving(A, Level2, Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
