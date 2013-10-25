@@ -1,7 +1,7 @@
 init module {
 	knowledge{
 		% insert knowledge here, if any, or remove section.
-		onRoute(A, Level, Dir) :- elevatorAtFloor(A, Here), elevatorDir(A, Dir), Diff is Level-Here, (Diff<0 -> Dir=down; Dir=up).
+		%onRoute(A, Level, Dir) :- elevatorAtFloor(A, Here), elevatorDir(A, Dir), Diff is Level-Here, (Diff<0 -> Dir=down; Dir=up).
 		
 		%somethingInteresting(A, Level, Dir)  :- agent(A), ((fButtonOn(Level, Dir), not(moving(_, _, Level))); clientWantsToGo(A, Level, _)). 
 		
@@ -11,6 +11,17 @@ init module {
 		elevatorAtFloor(any, Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
 		
 		readyToSend(A, Level, Level2) :- free(A), elevatorAtFloor(A, Level2), not(Level = Level2).
+		
+		fs(A, Level, Dir, Q) :- Q is (Fl + 2) - abs(Cur - Level), carPosition(A, Cur), floorCount(A, Fl), elevatorDir(A, Dir), onRoute(A, Level).
+
+		fs(A, Level, Dir, Q) :- Q is (Fl + 1) - abs(Cur - Level), carPosition(A, Cur), floorCount(A, Fl), elevatorDir(A, Dir), not(Dir = Dir2), onRoute(A, Level).
+		
+		fs(A, Level, Dir, Q) :- Q is 1, not(onRoute(A, Level)).
+
+		moveDir(A, Dir) :- moving(A, Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
+		moveDir(A, Dir) :- not(moving(A, _, _)), elevatorDir(A, Dir).
+
+		onRoute(A, Level) :- carPosition(A, cur), moveDir(A, Dir), Diff is cur - Level, (Diff<0 -> Dir = down; Dir=up).
 		
 	}                                                                                                         
 	
