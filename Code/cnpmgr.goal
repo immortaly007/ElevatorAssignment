@@ -12,17 +12,18 @@ init module {
 		
 		readyToSend(A, Level, Level2) :- free(A), elevatorAtFloor(A, Level2), not(Level = Level2).
 		
-		fs(A, Level, Dir, Q) :- Q is ((Fl + 2) - abs(Cur - Level)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level).
+		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), Q is ((Fl + 2) - abs(Cur - Level)).
 
-		fs(A, Level, Dir, Q) :- Q is ((Fl + 1) - abs(Cur - Level)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), not(Dir = Dir2), onRoute(A, Level).
+		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), not(Dir = Dir2), onRoute(A, Level), Q is ((Fl + 1) - abs(Cur - Level)).
 		
-		fs(A, Level, Dir, Q) :- Q is 1, not(onRoute(A, Level)).
+		fs(A, Level, Dir, Q) :- not(me(A)), not(onRoute(A, Level)), Q is 1, agent(A).
 
 		moveDir(A, Dir) :- moving(A, Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
 		moveDir(A, Dir) :- not(moving(A, _, _)), elevatorDir(A, Dir).
 
 		onRoute(A, Level) :- carPosition(A, Cur), moveDir(A, Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
 		
+		basTest(A, B, Q) :- Q is A + B.
 	}                                                                                                         
 	
 	
