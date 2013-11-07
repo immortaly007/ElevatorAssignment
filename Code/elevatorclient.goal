@@ -8,7 +8,8 @@ init module {
 		moveDir(Dir) :- moving(Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
 		moveDir(Dir) :- not(moving(_, _)), Dir = no.		
 		
-		fs(Level, Dir, Type, Q) :- Type = e, carPosition(Cur), floorCount(Fl), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level)).
+		fs(Level, Dir, Type, Q) :- Type = e, people(Pop), capacity(Cap), carPosition(Cur), floorCount(Fl), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level) + (Pop/Cap)*(0.5 * Fl) %+ 1000
+			).
 		
 		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level) - Penalty).
 		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir2), not(Dir = Dir2), onRoute(Level), Q is ((Fl + 0) - abs(Cur - Level) - Penalty).
@@ -78,7 +79,7 @@ main module{
 		forall bel(received(manager,goto(L, Dir))) do insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + adopt(updatePlan).
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
-		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e))  + adopt(updatePlan).
+		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)) + adopt(updatePlan).
 		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f), not(elevatorFull)) then delete( gotoFloor(L, Dir, f), fButtonOn(L, Dir))  + adopt(updatePlan).
 
 		if bel(free, jobsLeft(L)) then send(manager, jobsLeft(L)).

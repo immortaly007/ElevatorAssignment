@@ -47,6 +47,7 @@ init module {
 	
 	goals{
 		% insert initial goals here, if any, or remove section.
+		pickLeadingAgent.
 	}
 	
 	program {
@@ -64,6 +65,8 @@ main module{
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
 		%if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, OldLevel, Level)), readyToSend(A, Level, OldLevel) ) then 
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
+			
+		if goal(pickLeadingAgent), bel(agent(A), not(me(A)) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).	
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A)) then send(A, goto(Level,Dir))+drop(sendElevator(Level,Dir)) + delete(free(A)).
 	}
 }
@@ -88,7 +91,8 @@ main module{
 		%forall bel( received(A,  eButtonOn(Level, Dir)) ) do insert( clientWantsToGo(A, Level, Dir) ) + delete( received(A, eButtonOn(Level, Dir)) ).
 		
 	    % fButtonOn processing (independent of elevator/client)
-	    forall bel( received(A, fButtonOn(Level, Dir)) ) do insert( fButtonOn(Level, Dir) ) + delete( received(A, fButtonOn(Level, Dir)) ) + adopt(sendElevator(Level,Dir)).
+	    forall bel( received(A, fButtonOn(Level, Dir)), leadingAgent(A) ) do insert( fButtonOn(Level, Dir) ) + delete( received(A, fButtonOn(Level, Dir)) ) + adopt(sendElevator(Level,Dir)).
+		forall bel( received(A, fButtonOn(Level, Dir))) do delete( received(A, fButtonOn(Level, Dir)) ).
 		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(A, delFButtonOn(Level, Dir)) ).
 		
 		% Process the doorstate for each client
