@@ -23,7 +23,7 @@ init module {
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), not(onRoute(A, Level)), 
 			agentBonus(A, B), Q is 1 + B.
 		
-		agentBonus(A, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), B is Bonus - Count*1.
+		agentBonus(A, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), B is Bonus - Count*2.
 			
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
@@ -33,8 +33,9 @@ init module {
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A, Q)) :- maxFS(T, elevatorQuality(A2, Q2)), Q >= Q2.
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A2, Q2)) :- maxFS(T, elevatorQuality(A2, Q2)), Q2 > Q.
 		
-		jobCount(A, N) :- jobsLeft(A, L), length(L, N).
+		jobCount(A, N) :- jobsLeft(A, L), length(L, N).	
 
+		free(A) :- jobsLeft(A, L), length(L, N), N = 0.
 	}                                                                                                         
 	
 	
@@ -59,7 +60,6 @@ init module {
 	
 main module{
 	program{
-		
 		%if a-goal(elevatorAtFloor(A, Level, Dir)), bel(readyToSend(A, Level, OldLevel)) then
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
 		%if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, OldLevel, Level)), readyToSend(A, Level, OldLevel) ) then 
@@ -96,7 +96,7 @@ main module{
 		forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
 		
 		% Process free agents
-		forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
+		%forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
 		
 		% Process directions
 		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, dir(Dir) ),moveDir(A,OldDir) ).

@@ -2,12 +2,13 @@ init module {
 	knowledge{
 		% insert knowledge here, if any, or remove section.
 		
+		onRoute(Level) :- carPosition(Cur), moveDir(no).
 		onRoute(Level) :- carPosition(Cur), moveDir(Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
 
 		moveDir(Dir) :- moving(Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
-		moveDir(Dir) :- not(moving(_, _)), dir(Dir).		
+		moveDir(Dir) :- not(moving(_, _)), Dir = no.		
 		
-		fs(Level, Dir, Type, Q) :- Type = e, carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level)).
+		fs(Level, Dir, Type, Q) :- Type = e, carPosition(Cur), floorCount(Fl), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level)).
 		
 		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level) - Penalty).
 		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir2), not(Dir = Dir2), onRoute(Level), Q is ((Fl + 0) - abs(Cur - Level) - Penalty).
@@ -29,19 +30,16 @@ init module {
 		
 		elevatorFull :- capacity(N), people(N2), N = N2.
 		
-		free :- not(moving(_, _)).
+		free :- not(moving(_, _)), jobsLeft(L), length(L, N),  N = 0.
 		
 		jobsLeft(L) :-  findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L).
-		
-		jobCount(N) :- jobsLeft(L), length(L, N).
-
 	}
 	
 	beliefs{
 		% The direction that will be shown to the people at the next stop.
 		% This remains the intended direction of movement until there are no more
 		% planned stops in that direction.
-		dir(up).
+		dir(no).
 		% Initially, it is unknown whether doors are open or closed.
 		doorState(unknown).
 		
@@ -68,7 +66,7 @@ init module {
 		% When the elevator arrives at the requested floor, the Dir light will turn on.
 		goto(Level, Dir) {
 		   pre{dir(OldDir) }
-		   post{dir(Dir), not(dir(OldDir)) }
+		   post{dir(Dir), not(dir(OldDir)), sendDir(Dir) }
 		}
 	}
 }
@@ -77,16 +75,15 @@ main module{
 	program{
 		%%%%%% Goal Management %%%%%%
 		if goal(sendFirstUpdate) then send(manager, jobsLeft([])) + drop(sendFirstUpdate).
+		forall bel(received(manager,goto(L, Dir))) do insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + adopt(updatePlan).
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
-		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)) + updatePlan.
-		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f), not(elevatorFull)) then delete( gotoFloor(L, Dir, f), fButtonOn(L, Dir)) + updatePlan.
+		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e))  + adopt(updatePlan).
+		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f), not(elevatorFull)) then delete( gotoFloor(L, Dir, f), fButtonOn(L, Dir))  + adopt(updatePlan).
+
+		if bel(free, jobsLeft(L)) then send(manager, jobsLeft(L)).
 		
 		if goal(updatePlan) then drop(updatePlan) + updatePlan.
-		
-		if bel(received(manager,goto(L, Dir))) then insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + updatePlan.
-
-		
 		%if a-goal( atFloor(Level), dir(Dir) ) then goto(Level, Dir).
 		%if goal(atFloor(Level)), bel( findall(levelQuality(Level, Q), 
 	}
@@ -96,7 +93,7 @@ module updatePlan {
 	program {
 		% Goto the nearest floor that the agent wants to go to.
 		if bel(carPosition(Cur), moving(L1, L2), jobsLeft(L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
-			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2), free) + send(manager, jobsLeft(L)) .
+			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2)) + send(manager, jobsLeft(L)) .
 		if bel(carPosition(Cur), jobsLeft(L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
 			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + send(manager, jobsLeft(L)) .
 	}
@@ -106,7 +103,7 @@ event module{
 	program{
 		%%%%% Percept Processing %%%%%
 		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ) + insert(capacity(N)).
-		forall bel( percept(people(N) ), people(N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
+		forall bel( percept(people(N) ), people(N2), not(N = N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
 		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) )  + insert(floorCount(N)).
 		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
@@ -115,7 +112,7 @@ event module{
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% Send to the manager where the client wants to go
-		forall bel( percept(eButtonOn(Level)), gotoFloor(Level, Dir2, f) ) do insert(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
+		forall bel( percept(eButtonOn(Level)), gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do insert(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
 		forall bel( percept(eButtonOn(Level)), dir(Dir), not(gotoFloor(Level, Dir, e) )) do insert(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
 
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
@@ -130,7 +127,7 @@ event module{
 		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
-		if bel(free) then send(manager, free).
+		%if bel(free) then send(manager, free).
 		
 		%if bel(jobsLeft(L), not (sent(jobsLeft(L))), sent(jobsLeft(L2)), not (L = L2)) then send(manager, jobsLeft(L)) + delete(sent(jobsLeft(L2))).
 		%if bel(jobsLeft(L), not(sent(jobsLeft(L)))) then send(manager, jobsLeft(L)).
