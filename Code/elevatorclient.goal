@@ -28,7 +28,7 @@ init module {
 		calculateFS([], []).
 		calculateFS([gotoFloor(Level, Dir, Type) | T], [levelQuality(Level, Dir, Q) | T2]) :- calculateFS(T, T2), fs(Level, Dir, Type, Q).
 		
-		elevatorFull :- capacity(N), people(N2), N = N2.
+		elevatorFull :- capacity(N), people(N2),  N = N2.
 		
 		free :- not(moving(_, _)), jobsLeft(L), length(L, N),  N = 0.
 		
