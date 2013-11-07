@@ -75,8 +75,16 @@ init module {
 main module{
 	program{
 		%%%%%% Goal Management %%%%%%
+		% Send an empty jobList to the manager, so that the manager knows that this agent is ready to accept jobs
 		if goal(sendFirstUpdate) then send(manager, jobsLeft([])) + drop(sendFirstUpdate).
+		
+		% Adopt the auto distribution goal.
+		forall bel(received(manager, gotoOnce(L, Dir))) do goto(L, Dir) + delete(received(manager, gotoOnce(L, Dir)) ).
+		
+		% If the manager send any commands, put them in the queue to execute as soon as we're close.
 		forall bel(received(manager,goto(L, Dir))) do insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + adopt(updatePlan).
+		
+		
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
 		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)) + adopt(updatePlan).

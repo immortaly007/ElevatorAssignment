@@ -82,7 +82,8 @@ main module{
 		
 		if goal(pickLeadingAgent), bel( elevator(A) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).
 		if a-goal(agentsEnumerated), bel( elevator(A), not(elevatorNr(A, _)), elevatorNrs(L), max_list(L, Max), ToAssign is Max + 1 ) then insert(elevatorNr(A, ToAssign)).
-		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, goto(Level, up)) + insert(sendElevatorToBestFloor(A)).
+		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, gotoOnce(Level, up)) + insert(sendElevatorToBestFloor(A)).
+		
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A)) then send(A, goto(Level,Dir))+drop(sendElevator(Level,Dir)) + delete(free(A)).
 	}
 }
