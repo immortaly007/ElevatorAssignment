@@ -10,6 +10,8 @@ init module {
 		dir(down).
 		% Initially, it is unknown whether doors are open or closed.
 		doorState(unknown).
+		
+		carPosition(0).
 	}
 	
 	goals{
@@ -48,7 +50,7 @@ event module{
 		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ).
 		forall bel( percept(people(N) )) do send(manager, people(N) ).
 		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) ).
-		forall bel( percept(carPosition(L) )) do send(manager, carPosition(L) ).
+		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
 		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
 		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do send(manager, atFloor(Level) ) + insert( atFloor(Level) ).

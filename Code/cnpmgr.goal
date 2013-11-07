@@ -9,17 +9,26 @@ init module {
 		
 		readyToSend(A, Level, Level2) :- free(A), elevatorAtFloor(A, Level2), not(Level = Level2).
 		
-		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), Q is ((Fl + 2) - abs(Cur - Level)).
-
-		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), not(Dir = Dir2), onRoute(A, Level), Q is ((Fl + 1) - abs(Cur - Level)).
-		
-		fs(A, Level, Dir, Q) :-  agent(A), not(me(A)), not(onRoute(A, Level)), Q is 1.
-
-		moveDir(A, Dir) :- moving(A, Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
+	    moveDir(A, Dir) :- moving(A, Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
 		moveDir(A, Dir) :- not(moving(A, _, _)), elevatorDir(A, Dir).
 
 		onRoute(A, Level) :- carPosition(A, Cur), moveDir(A, Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
 		
+		
+		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), Q is ((Fl + 2) - abs(Cur - Level)).
+		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), Q is ((Fl + 1) - abs(Cur - Level)).
+		fs(A, Level, Dir, Q) :-  agent(A), not(me(A)), not(onRoute(A, Level)), Q is 1.
+		
+		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
+		
+		maxFS(Level, Dir, A) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(A, Q)).
+		
+		maxFS([], elevatorQuality(0, 0)).
+		maxFS([elevatorQuality(A, Q)], elevatorQuality(A, Q)). 
+		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A, Q)) :- maxFS(T, elevatorQuality(A2, Q2)), Q > Q2.
+		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A2, Q2)) :- maxFS(T, elevatorQuality(A2, Q2)), Q2 > Q.
+
+
 		
 		
 		
