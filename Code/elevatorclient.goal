@@ -1,11 +1,14 @@
 init module {
 	knowledge{
 		% insert knowledge here, if any, or remove section.
+		
+		onRoute(Level) :- carPosition(Cur), moveDir(Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
+
 		moveDir(Dir) :- moving(Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
 		moveDir(Dir) :- not(moving(_, _)), dir(Dir).		
 		
-		fs(Level, Dir, Q) :- carPosition(Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), Q is ((Fl + 2) - abs(Cur - Level)).
-		fs(Level, Dir, Q) :- carPosition(Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), Q is ((Fl + 1) - abs(Cur - Level)).
+		fs(Level, Dir, Q) :- carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level)).
+		fs(Level, Dir, Q) :- carPosition(Cur), floorCount(Fl), moveDir(Dir2), not(Dir = Dir2), onRoute(Level), Q is ((Fl + 1) - abs(Cur - Level)).
 		fs(Level, Dir, Q) :-  not(onRoute(Level)), Q is 1.
 		
 		%listFS(Level, Dir, L) :- findall(elevatorQuality(Level, Q), fs(Level, Dir, Q), L).
@@ -13,12 +16,14 @@ init module {
 		%maxFS(Level, Dir, Level) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(Level, Q)).
 		
 		maxFS([], levelQuality(0, 0)).
-		maxFS([levelQuality(Level, Dir, Q)], levelQuality(Level, Q)). 
+		maxFS([levelQuality(Level, Dir, Q)], levelQuality(Level, Dir, Q)). 
 		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level, Dir, Q)) :- maxFS(T, elevatorQuality(Level2, Dir2, Q2)), Q >= Q2.
 		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2)) :- maxFS(T, elevatorQuality(Level2, Dir2, Q2)), Q2 > Q.
 		
 		calculateFS([], []).
 		calculateFS([gotoFloor(Level, Dir, Type) | T], [levelQuality(Level, Dir, Q) | T2]) :- calculateFS(T, T2), fs(Level, Dir, Q).
+		
+		elevatorFull :- capacity(N), people(N2), N = N2.
 	}
 	
 	beliefs{
@@ -34,6 +39,8 @@ init module {
 		moveDir(up).
 		
 		sent(moveDir(nothing)).
+		
+		people(0).
 	}
 	
 	goals{
@@ -61,12 +68,12 @@ main module{
 		%%%%%% Goal Management %%%%%%
 		if bel(received(manager,goto(L, Dir))) then insert(gotoFloor(L, Dir, f))+delete(received(manager,goto(L,Dir))).
 		
-		%if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
+		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
 		
 		% Goto the nearest floor that the agent wants to go to.
-		if bel(carPosition(Cur), moving(L1, L2), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, BestLevel, BestDir)) 
+		if bel(carPosition(Cur), moving(L1, L2), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
 			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2)).
-		if bel(carPosition(Cur), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, BestLevel, BestDir)) 
+		if bel(carPosition(Cur), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
 			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)).
 		
 		%if a-goal( atFloor(Level), dir(Dir) ) then goto(Level, Dir).
@@ -77,9 +84,9 @@ main module{
 event module{
 	program{
 		%%%%% Percept Processing %%%%%
-		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ).
-		forall bel( percept(people(N) )) do send(manager, people(N) ).
-		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) ).
+		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ) + insert(capacity(N)).
+		forall bel( percept(people(N) ), people(N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
+		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) )  + insert(floorCount(N)).
 		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
 		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
