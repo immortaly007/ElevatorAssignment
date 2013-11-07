@@ -24,6 +24,8 @@ init module {
 		calculateFS([gotoFloor(Level, Dir, Type) | T], [levelQuality(Level, Dir, Q) | T2]) :- calculateFS(T, T2), fs(Level, Dir, Q).
 		
 		elevatorFull :- capacity(N), people(N2), N = N2.
+		
+		free :- not(moving(_, _)).
 	}
 	
 	beliefs{
@@ -72,7 +74,7 @@ main module{
 		
 		% Goto the nearest floor that the agent wants to go to.
 		if bel(carPosition(Cur), moving(L1, L2), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
-			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2)).
+			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2), free).
 		if bel(carPosition(Cur), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
 			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)).
 		
@@ -108,7 +110,7 @@ event module{
 		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
-		if not(goal(true)) then send(manager, free).
+		if bel(free) then send(manager, free).
 	}
 }
 

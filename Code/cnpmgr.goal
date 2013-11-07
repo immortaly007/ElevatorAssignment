@@ -4,8 +4,8 @@ init module {
 	
 		%elevatorAtFloor(Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
 		
-		elevatorAtFloor(A, Level, Dir):- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
-		elevatorAtFloor(any, Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
+		%elevatorAtFloor(A, Level, Dir):- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
+		%elevatorAtFloor(any, Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
 		
 		%readyToSend(A, Level, Level2) :- free(A), elevatorAtFloor(A, Level2), not(Level = Level2).
 		
@@ -15,9 +15,12 @@ init module {
 		onRoute(A, Level) :- carPosition(A, Cur), moveDir(A, Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
 		
 		
-		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), Q is ((Fl + 2) - abs(Cur - Level)).
-		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), Q is ((Fl + 1) - abs(Cur - Level)).
-		fs(A, Level, Dir, Q) :-  agent(A), not(me(A)), not(onRoute(A, Level)), Q is 1.
+		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), 
+			bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), Q is ((Fl + 2) - abs(Cur - Level) + Bonus).
+		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), 
+			bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), Q is ((Fl + 1) - abs(Cur - Level) + Bonus).
+		fs(A, Level, Dir, Q) :-  agent(A), not(me(A)), not(onRoute(A, Level)), 
+			bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0),Q is 1 + Bonus.
 		
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
@@ -32,6 +35,7 @@ init module {
 	
 	beliefs{
 		% insert initial beliefs here, if any, or remove section.
+		bonus(5).
 		
 	}
 	
@@ -55,7 +59,7 @@ main module{
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
 		%if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, OldLevel, Level)), readyToSend(A, Level, OldLevel) ) then 
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
-		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A)) then send(A, goto(Level,Dir))+drop(sendElevator(Level,Dir)).
+		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A)) then send(A, goto(Level,Dir))+drop(sendElevator(Level,Dir)) + delete(free(A)).
 	}
 }
 
@@ -72,8 +76,8 @@ main module{
 		forall bel( received(A,carPosition(L) ), carPosition(A,L2)) do insert(carPosition(A,L) ) + delete(carPosition(A,L2),received(A,carPosition(L))).
 		
  		% Receive and save the location of the clients to the believe base
-		forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
-		forall bel( received(A, atFloor(Level)), not(moving(A, Level2, Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
+		%forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
+		%forall bel( received(A, atFloor(Level)), not(moving(A, Level2, Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
 
 		% Receive and save what button the client pressed (eButtonPressed)
 		%forall bel( received(A,  eButtonOn(Level, Dir)) ) do insert( clientWantsToGo(A, Level, Dir) ) + delete( received(A, eButtonOn(Level, Dir)) ).
@@ -87,7 +91,7 @@ main module{
 		forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
 		
 		% Process free agents
-		%forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
+		forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
 		
 		% Process directions
 		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, dir(Dir) ),moveDir(A,OldDir) ).
