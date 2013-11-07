@@ -2,7 +2,23 @@ init module {
 	knowledge{
 		% insert knowledge here, if any, or remove section.
 		moveDir(Dir) :- moving(Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
-		moveDir(Dir) :- not(moving(_, _)), dir(Dir).
+		moveDir(Dir) :- not(moving(_, _)), dir(Dir).		
+		
+		fs(Level, Dir, Q) :- carPosition(Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), Q is ((Fl + 2) - abs(Cur - Level)).
+		fs(Level, Dir, Q) :- carPosition(Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), Q is ((Fl + 1) - abs(Cur - Level)).
+		fs(Level, Dir, Q) :-  not(onRoute(Level)), Q is 1.
+		
+		%listFS(Level, Dir, L) :- findall(elevatorQuality(Level, Q), fs(Level, Dir, Q), L).
+		
+		%maxFS(Level, Dir, Level) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(Level, Q)).
+		
+		maxFS([], levelQuality(0, 0)).
+		maxFS([levelQuality(Level, Dir, Q)], levelQuality(Level, Q)). 
+		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level, Dir, Q)) :- maxFS(T, elevatorQuality(Level2, Dir2, Q2)), Q >= Q2.
+		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2)) :- maxFS(T, elevatorQuality(Level2, Dir2, Q2)), Q2 > Q.
+		
+		calculateFS([], []).
+		calculateFS([gotoFloor(Level, Dir, Type) | T], [levelQuality(Level, Dir, Q) | T2]) :- calculateFS(T, T2), fs(Level, Dir, Q).
 	}
 	
 	beliefs{
@@ -43,12 +59,18 @@ init module {
 main module{
 	program{
 		%%%%%% Goal Management %%%%%%
-		if bel(received(manager,goto(X,DIR))) then adopt(atFloor(X), dir(DIR))+delete(received(manager,goto(X,DIR))).
+		if bel(received(manager,goto(L, Dir))) then insert(gotoFloor(L, Dir, f))+delete(received(manager,goto(L,Dir))).
 		
-		if goal-a( atFloor(L2) ), bel(moving(L1, L2)) then delete(moving(L1, L2)).
+		%if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
 		
 		% Goto the nearest floor that the agent wants to go to.
-		if a-goal( atFloor(L2), dir(Dir)), bel(atFloor(L1)) then goto(L2, Dir) + insert(moving(L1, L2)).
+		if bel(carPosition(Cur), moving(L1, L2), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, BestLevel, BestDir)) 
+			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2)).
+		if bel(carPosition(Cur), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, BestLevel, BestDir)) 
+			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)).
+		
+		%if a-goal( atFloor(Level), dir(Dir) ) then goto(Level, Dir).
+		%if goal(atFloor(Level)), bel( findall(levelQuality(Level, Q), 
 	}
 }
 
@@ -65,7 +87,7 @@ event module{
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% Send to the manager where the client wants to go
-		forall bel( percept(eButtonOn(Level)), dir(Dir) ) do send( manager, eButtonOn(Level, Dir) ).
+		forall bel( percept(eButtonOn(Level)), dir(Dir) ) do insert(gotoFloor(Level, Dir, e)). 
 
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
 		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
