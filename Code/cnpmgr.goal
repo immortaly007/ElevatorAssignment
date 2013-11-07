@@ -16,12 +16,14 @@ init module {
 		
 		
 		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), 
-			bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), Q is ((Fl + 2) - abs(Cur - Level) + Bonus).
+			agentBonus(A, B), Q is ((Fl + 2) - abs(Cur - Level) + B).
 		fs(A, Level, Dir, Q) :- agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), 
-			bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), Q is ((Fl + 1) - abs(Cur - Level) + Bonus).
+			agentBonus(A, B), Q is ((Fl + 1) - abs(Cur - Level) + B).
 		fs(A, Level, Dir, Q) :-  agent(A), not(me(A)), not(onRoute(A, Level)), 
-			bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0),Q is 1 + Bonus.
+			agentBonus(A, B), Q is 1 + B.
 		
+		agentBonus(A, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), B is Bonus - Count*0.
+			
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
 		maxFS(Level, Dir, A) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(A, Q)).
@@ -29,13 +31,15 @@ init module {
 		maxFS([elevatorQuality(A, Q)], elevatorQuality(A, Q)). 
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A, Q)) :- maxFS(T, elevatorQuality(A2, Q2)), Q >= Q2.
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A2, Q2)) :- maxFS(T, elevatorQuality(A2, Q2)), Q2 > Q.
+		
+		jobCount(N) :- findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), length(L, N).
 
 	}                                                                                                         
 	
 	
 	beliefs{
 		% insert initial beliefs here, if any, or remove section.
-		bonus(5).
+		bonus(0).
 		
 	}
 	
@@ -95,6 +99,12 @@ main module{
 		
 		% Process directions
 		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, dir(Dir) ),moveDir(A,OldDir) ).
+		
+		% Update jobcounts
+		forall bel(received(A, jobCount(Count)), not(jobCount(A, _))) do insert(jobCount(A, Count)) + delete(received(A, jobCount(Count))).
+		forall bel(received(A, jobCount(Count)), jobCount(A, Count2)) do insert(jobCount(A, Count)) + delete(jobCount(A, Count2), received(A, jobCount(Count))).
+		
+		
 		%forall bel( received(A, moveDir(Dir)), elevatorDir(A, Dir2), not(Dir = Dir2) ) do insert(elevatorDir(A, Dir) ) + delete(received(A, dir(Dir) ), elevatorDir(A, Dir2) ).
 		
 		%forall bel( elevatorAtFloor(A, Level), clientWantsToGo(A, Level, Dir), elevatorDoorState(A, opened) ) do delete(clientWantsToGo(A, Level, Dir)) .
