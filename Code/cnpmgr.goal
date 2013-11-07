@@ -36,7 +36,19 @@ init module {
 		jobCount(A, N) :- jobsLeft(A, L), length(L, N).	
 
 		free(A) :- jobsLeft(A, L), length(L, N), N = 0.
-	}                                                                                                         
+		
+		elevator(A) :- agent(A), not(me(A)).
+		
+		agentsNotEnumerated :- elevator(A), not(elevatorNr(A, _)).
+		agentsEnumerated :- not(agentsNotEnumerated).
+		
+		elevatorNrs([0]) :- not(elevatorNr(_, _)).
+		elevatorNrs(L) :- findall(N, elevatorNr(_, N), L).
+		
+		elevatorBestFloor(A, Level) :- elevatorNr(A, Nr), floorCount(A, Fl), elevatorNrs(L), max_list(L, ElevatorCount), Level is round(((Fl - 1) / ElevatorCount) * Nr) - 1.
+		
+		distributedAgents :- not(elevator(A), sendElevatorToBestFloor(A)).
+	}                                                     
 	
 	
 	beliefs{
@@ -48,6 +60,8 @@ init module {
 	goals{
 		% insert initial goals here, if any, or remove section.
 		pickLeadingAgent.
+		agentsEnumerated.
+		distributedAgents.
 	}
 	
 	program {
@@ -65,8 +79,10 @@ main module{
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
 		%if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, OldLevel, Level)), readyToSend(A, Level, OldLevel) ) then 
 			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
-			
-		if goal(pickLeadingAgent), bel(agent(A), not(me(A)) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).	
+		
+		if goal(pickLeadingAgent), bel( elevator(A) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).
+		if a-goal(agentsEnumerated), bel( elevator(A), not(elevatorNr(A, _)), elevatorNrs(L), max_list(L, Max), ToAssign is Max + 1 ) then insert(elevatorNr(A, ToAssign)).
+		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, goto(Level, up)) + insert(sendElevatorToBestFloor(A)).
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A)) then send(A, goto(Level,Dir))+drop(sendElevator(Level,Dir)) + delete(free(A)).
 	}
 }
