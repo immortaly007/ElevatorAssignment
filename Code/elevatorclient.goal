@@ -7,9 +7,13 @@ init module {
 		moveDir(Dir) :- moving(Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
 		moveDir(Dir) :- not(moving(_, _)), dir(Dir).		
 		
-		fs(Level, Dir, Type, Q) :- (elevatorFull, Type = f -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level) - Penalty).
-		fs(Level, Dir, Type, Q) :- (elevatorFull, Type = f -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir2), not(Dir = Dir2), onRoute(Level), Q is ((Fl + 0) - abs(Cur - Level) - Penalty).
+		fs(Level, Dir, Type, Q) :- Type = e, carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level)).
+		
+		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir), onRoute(Level), Q is ((Fl + 2) - abs(Cur - Level) - Penalty).
+		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir2), not(Dir = Dir2), onRoute(Level), Q is ((Fl + 0) - abs(Cur - Level) - Penalty).
 		fs(Level, Dir, Type, Q) :- (elevatorFull, Type = f -> Penalty = 1000; Penalty = 0), not(onRoute(Level)), Q is 1 - Penalty.
+		
+		
 		
 		%listFS(Level, Dir, L) :- findall(elevatorQuality(Level, Q), fs(Level, Dir, Q), L).
 		
@@ -111,7 +115,7 @@ event module{
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% Send to the manager where the client wants to go
-		forall bel( percept(eButtonOn(Level)), gotoFloor(Level, Dir2, f) )) do insert(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
+		forall bel( percept(eButtonOn(Level)), gotoFloor(Level, Dir2, f) ) do insert(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
 		forall bel( percept(eButtonOn(Level)), dir(Dir), not(gotoFloor(Level, Dir, e) )) do insert(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
 
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
@@ -127,6 +131,9 @@ event module{
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
 		if bel(free) then send(manager, free).
+		
+		%if bel(jobsLeft(L), not (sent(jobsLeft(L))), sent(jobsLeft(L2)), not (L = L2)) then send(manager, jobsLeft(L)) + delete(sent(jobsLeft(L2))).
+		%if bel(jobsLeft(L), not(sent(jobsLeft(L)))) then send(manager, jobsLeft(L)).
 		
 		%if bel(jobCount(Count), not(sent(jobCount(Count))), sent(jobCount(Count2)), not(Count = Count2))  then send(manager, jobCount(Count)) + delete(sent(jobCount(Count2))).
 		%if bel(jobCount(Count), not(sent(jobCount(Count)))) then send(manager, jobCount(Count)).
