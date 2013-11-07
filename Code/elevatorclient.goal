@@ -17,8 +17,8 @@ init module {
 		
 		maxFS([], levelQuality(0, 0)).
 		maxFS([levelQuality(Level, Dir, Q)], levelQuality(Level, Dir, Q)). 
-		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level, Dir, Q)) :- maxFS(T, elevatorQuality(Level2, Dir2, Q2)), Q >= Q2.
-		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2)) :- maxFS(T, elevatorQuality(Level2, Dir2, Q2)), Q2 > Q.
+		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level, Dir, Q)) :- maxFS(T, levelQuality(Level2, Dir2, Q2)), Q >= Q2.
+		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2)) :- maxFS(T, levelQuality(Level2, Dir2, Q2)), Q2 > Q.
 		
 		calculateFS([], []).
 		calculateFS([gotoFloor(Level, Dir, Type) | T], [levelQuality(Level, Dir, Q) | T2]) :- calculateFS(T, T2), fs(Level, Dir, Q).
@@ -37,8 +37,6 @@ init module {
 		doorState(unknown).
 		
 		carPosition(0).
-		
-		moveDir(up).
 		
 		sent(moveDir(nothing)).
 		
@@ -59,8 +57,8 @@ init module {
 		% atFloor(Here) holds for some Here.
 		% When the elevator arrives at the requested floor, the Dir light will turn on.
 		goto(Level, Dir) {
-		   pre{ atFloor(Here), dir(DirNow) }
-		   post{ not(dir(DirNow)), dir(Dir), sendDir(Dir) }
+		   pre{ }
+		   post{dir(Dir) }
 		}
 	}
 }
@@ -71,6 +69,8 @@ main module{
 		if bel(received(manager,goto(L, Dir))) then insert(gotoFloor(L, Dir, f))+delete(received(manager,goto(L,Dir))).
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
+		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)).
+	    forall bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) do delete( gotoFloor(L, Dir, f)).
 		
 		% Goto the nearest floor that the agent wants to go to.
 		if bel(carPosition(Cur), moving(L1, L2), findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
