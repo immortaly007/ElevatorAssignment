@@ -57,8 +57,8 @@ init module {
 		% atFloor(Here) holds for some Here.
 		% When the elevator arrives at the requested floor, the Dir light will turn on.
 		goto(Level, Dir) {
-		   pre{ }
-		   post{dir(Dir) }
+		   pre{dir(OldDir) }
+		   post{dir(Dir), not(dir(OldDir)) }
 		}
 	}
 }
