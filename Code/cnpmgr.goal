@@ -97,7 +97,7 @@ main module{
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A), jobsAssignedSinceUpdate(A, N), N2 is N + 1)
 			then send(A, goto(Level,Dir)) + insert(jobsAssignedSinceUpdate(A, N2)) + delete(jobsAssignedSinceUpdate(A, N)) + drop(sendElevator(Level,Dir)).
 		
-		forall bel(received(A, pickup(Level, Dir)), fButtonOn(Level, Dir)) do adopt(sendElevator(Level, Dir)) + delete(receive(A, pickup(Level, Dir))).	
+		forall bel(received(A, pickup(Level, Dir)), fButtonOn(Level, Dir)) do adopt(sendElevator(Level, Dir)) + delete(received(A, pickup(Level, Dir))).	
 			
 		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(findall(elevatorQuality(A2, Q), (free(A2), fs(A2, Level, Dir, Q)), L), maxFS(L, elevatorQuality(A, Q))) then send(A, goto(Level, Dir)).
 	}
@@ -127,8 +127,8 @@ main module{
 		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(A, delFButtonOn(Level, Dir)) ).
 		
 		% Process the doorstate for each client
-		forall bel( received(A, doorState(New)), elevatorDoorState(A, Old), not(Old = New) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
-		forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
+		%forall bel( received(A, doorState(New)), elevatorDoorState(A, Old), not(Old = New) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
+		%forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
 		
 		% Process free agents
 		%forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).

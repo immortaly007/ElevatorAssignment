@@ -2,7 +2,7 @@ environment {
  env = "elevatorenv.jar".
  init = [
 	Simulation = "Random Rider Insertion", 
-	Floors = 20, Cars = 6,
+	Floors = 15, Cars = 4,
 	RandomSeed=6353, Capacity=8, People=100, 
 	InsertionTime=50000, 
 	TimeFactor = 0, Controller = "GOAL Controller",

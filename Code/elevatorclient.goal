@@ -77,15 +77,11 @@ main module{
 		
 		% Adopt the auto distribution goal.
 		forall bel(received(manager, gotoOnce(L, Dir))) do goto(L, Dir) + delete(received(manager, gotoOnce(L, Dir)) ).
-		
-		% If the manager send any commands, put them in the queue to execute as soon as we're close.
-		forall bel(received(manager,goto(L, Dir))) do insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + adopt(updatePlan).
-		
-		
+				
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
 		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)).
-		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) then delete( gotoFloor(L, Dir, f)) + send(manager, pickup(Level, Dir)).
+		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) then delete( gotoFloor(L, Dir, f)) + send(manager, pickup(L, Dir)).
 		
 		if bel(atFloor(L)) then adopt(updatePlan).
 		
@@ -109,6 +105,9 @@ module updatePlan {
 
 event module{
 	program{
+		% If the manager send any commands, put them in the queue to execute as soon as we're close.
+		forall bel(received(manager,goto(L, Dir))) do insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + adopt(updatePlan).
+		
 		%%%%% Percept Processing %%%%%
 		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ) + insert(capacity(N)).
 		forall bel( percept(people(N) ), people(N2), not(N = N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
@@ -130,7 +129,7 @@ event module{
 		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
-		forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) )+insert( not(doorState(Old)), doorState(New) ).		
+		%forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) )+insert( not(doorState(Old)), doorState(New) ).		
 		
 		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
 		
