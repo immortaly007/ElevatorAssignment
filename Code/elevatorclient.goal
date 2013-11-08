@@ -85,7 +85,7 @@ main module{
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
 		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)) + adopt(updatePlan).
-		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f), not(elevatorFull)) then delete( gotoFloor(L, Dir, f), fButtonOn(L, Dir))  + adopt(updatePlan).
+		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) then delete( gotoFloor(L, Dir, f)) + send(manager, pickup(Level, Dir))  + adopt(updatePlan).
 
 		if goal(updatePlan) then drop(updatePlan) + updatePlan.
 		

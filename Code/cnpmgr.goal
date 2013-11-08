@@ -24,11 +24,14 @@ init module {
 			agentBonus(A, Level, B), Q is 1 + B.
 		
 		agentBonus(A, Level, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), elevatorBestFloor(A, BestFloor), 
-			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount), B is Bonus - Count*2 + (1/(BestFloorDistance+1)) * (2*Fl/ElevatorCount).
+			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount),
+			(elevatorFull(A) -> FullPenalty = 1000; FullPenalty = 0), 
+			B is Bonus - Count*2 + (1/(BestFloorDistance+1)) * (2*Fl/ElevatorCount) - FullPenalty.
+			
+		elevatorFull(A) :- people(A, N), capacity(A, N). 
 			
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
-		maxFS(Level, Dir, Elevators, A):- maxFS(Elevators, elevatorQuality(A, Q)).
 		maxFS(Level, Dir, A) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(A, Q)).
 		
 		maxFS([elevatorQuality(A, Q)], elevatorQuality(A, Q)). 
@@ -94,7 +97,9 @@ main module{
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A), jobsAssignedSinceUpdate(A, N), N2 is N + 1)
 			then send(A, goto(Level,Dir)) + insert(jobsAssignedSinceUpdate(A, N2)) + delete(jobsAssignedSinceUpdate(A, N)) + drop(sendElevator(Level,Dir)).
 		
-		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(findall(A2, (free(A2)), L), maxFS(Level,Dir, L, A)) then send(A, goto(Level, Dir)).
+		forall bel(received(A, pickup(Level, Dir)), fButtonOn(Level, Dir)) do adopt(sendElevator(Level, Dir)) + delete(receive(A, pickup(Level, Dir))).	
+			
+		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(findall(elevatorQuality(A2, Q), (free(A2), fs(A2, Level, Dir, Q)), L), maxFS(L, elevatorQuality(A, Q))) then send(A, goto(Level, Dir)).
 	}
 }
 
@@ -103,6 +108,7 @@ main module{
 		% Receive some constants and current states
 		forall bel( received(A,capacity(N) )) do insert( capacity(A,N) ) + delete( received(A,capacity(N)) ) .
 		forall bel( received(A,floorCount(N) )) do insert(floorCount(A,N) ) + delete(received(A,floorCount(N) )).
+		
 		forall bel( received(A,people(N)), people(A, N2)) do insert ( people(A, N) ) + delete( people(A, N2),received(A,people(N)) ).
 		
 		if bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) then insert(carPosition(A,L) ) + delete(carPosition(A,L2),received(A,carPosition(L))).
