@@ -17,25 +17,27 @@ init module {
 		fs(A, Level, Dir, Q) :- jobsLeft(A, L), member(gotoFloor(Level, Dir, _), L), Q is 1000.
 		
 		fs(A, Level, Dir, Q) :- jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), 
-			agentBonus(A, B), Q is ((Fl + 2) - abs(Cur - Level) + B).
+			agentBonus(A, Level, B), Q is ((Fl + 2) - abs(Cur - Level) + B).
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), 
-			agentBonus(A, B), Q is ((Fl + 1) - abs(Cur - Level) + B).
+			agentBonus(A, Level, B), Q is ((Fl + 1) - abs(Cur - Level) + B).
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), not(onRoute(A, Level)), 
-			agentBonus(A, B), Q is 1 + B.
+			agentBonus(A, Level, B), Q is 1 + B.
 		
-		agentBonus(A, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), B is Bonus - Count*2.
+		agentBonus(A, Level, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), elevatorBestFloor(A, BestFloor), 
+			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount), B is Bonus - Count*2 + (1/(BestFloorDistance+1)) * (Fl/ElevatorCount).
 			
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
+		%maxFS(Level, Dir, Elevators, A):- maxFS(Elevators, elevatorQuality(A, Q)).
 		maxFS(Level, Dir, A) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(A, Q)).
 		
 		maxFS([elevatorQuality(A, Q)], elevatorQuality(A, Q)). 
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A, Q)) :- maxFS(T, elevatorQuality(A2, Q2)), Q >= Q2.
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A2, Q2)) :- maxFS(T, elevatorQuality(A2, Q2)), Q2 > Q.
 		
-		jobCount(A, N) :- jobsLeft(A, L), length(L, N).	
+		jobCount(A, N) :- jobsLeft(A, L), length(L, Actual), jobsAssignedSinceUpdate(A, New), N is Actual + New.	
 
-		free(A) :- jobsLeft(A, L), length(L, N), N = 0.
+		free(A) :- jobCount(A, N), N = 0.
 		
 		elevator(A) :- agent(A), not(me(A)).
 		
@@ -47,13 +49,16 @@ init module {
 		
 		elevatorBestFloor(A, Level) :- elevatorNr(A, Nr), floorCount(A, Fl), elevatorNrs(L), max_list(L, ElevatorCount), Level is round(((Fl - 1) / ElevatorCount) * Nr) - 1.
 		
-		distributedAgents :- not(elevator(A), sendElevatorToBestFloor(A)).
+		notDistributedAgents :- elevator(A), not(sendElevatorToBestFloor(A)).
+		distributedAgents :- not(notDistributedAgents).
+		
+		elevatorCount(ElevatorCount) :- elevatorNrs(L), max_list(L, ElevatorCount).
 	}                                                     
 	
 	
 	beliefs{
 		% insert initial beliefs here, if any, or remove section.
-		bonus(3).
+		bonus(100).
 		
 	}
 	
@@ -66,6 +71,7 @@ init module {
 	
 	program {
         % insert one-time rules here, or remove section
+		forall bel(agent(A), not(me(A))) do insert(jobsAssignedSinceUpdate(A, 0), jobsLeft(A, []), carPosition(A, 0), people(A, 0)).
     }
 	
 	actionspec{
@@ -85,10 +91,11 @@ main module{
 		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, gotoOnce(Level, up)) + insert(sendElevatorToBestFloor(A)).
 		
 		
-		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A))
-			then send(A, goto(Level,Dir)) + drop(sendElevator(Level,Dir)).
+		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A), jobsAssignedSinceUpdate(A, N), N2 is N + 1)
+			then send(A, goto(Level,Dir)) + insert(jobsAssignedSinceUpdate(A, N2)) + delete(jobsAssignedSinceUpdate(A, N)) + drop(sendElevator(Level,Dir)).
 		
-		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(maxFS(Level,Dir,A)) then send(A, goto(Level, Dir)).
+		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(%findall(A, (agent(A), free(A)), L), 
+			maxFS(Level,Dir, A)) then send(A, goto(Level, Dir)).
 	}
 }
 
@@ -97,12 +104,10 @@ main module{
 		% Receive some constants and current states
 		forall bel( received(A,capacity(N) )) do insert( capacity(A,N) ) + delete( received(A,capacity(N)) ) .
 		forall bel( received(A,floorCount(N) )) do insert(floorCount(A,N) ) + delete(received(A,floorCount(N) )).
-		
-		forall bel( received(A,people(N)), not(people(A, _))) do insert( people(A,N) )+delete(received(A,people(N))).
 		forall bel( received(A,people(N)), people(A, N2)) do insert ( people(A, N) ) + delete( people(A, N2),received(A,people(N)) ).
 		
-		forall bel( received(A,carPosition(L) ), not(carPosition(A,_))) do insert(carPosition(A,L) ) + delete(received(A, carPosition(L))).
-		forall bel( received(A,carPosition(L) ), carPosition(A,L2)) do insert(carPosition(A,L) ) + delete(carPosition(A,L2),received(A,carPosition(L))).
+		if bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) then insert(carPosition(A,L) ) + delete(carPosition(A,L2),received(A,carPosition(L))).
+		forall bel(received(A, carPosition(L))) do delete(received(A, carPosition(L))). 
 		
  		% Receive and save the location of the clients to the believe base
 		%forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
@@ -127,8 +132,8 @@ main module{
 		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, dir(Dir) ),moveDir(A,OldDir) ).
 		
 		% Update jobsLeft
-		if bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) then insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
-		if bel(received(A, jobsLeft(L)), jobsLeft(A, L2)) then insert(jobsLeft(A, L)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L))).
+		%if bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) then insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
+		if bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), not(N = 0), not(L = L2)) then insert(jobsLeft(A, L), jobsAssignedSinceUpdate(A, 0)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)).
 		forall bel(received(A, jobsLeft(L))) do delete(received(A, jobsLeft(L))).
 		
 		%forall bel(received(A, jobCount(Count)), not(jobCount(A, _))) do insert(jobCount(A, Count)) + delete(received(A, jobCount(Count))).
