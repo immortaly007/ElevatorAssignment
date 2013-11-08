@@ -129,11 +129,13 @@ main module{
 		%forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
 		
 		% Process directions
-		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, dir(Dir) ),moveDir(A,OldDir) ).
+		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, moveDir(Dir) ),moveDir(A,OldDir) ).
 		
 		% Update jobsLeft
 		%if bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) then insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
 		if bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), not(N = 0), not(L = L2)) then insert(jobsLeft(A, L), jobsAssignedSinceUpdate(A, 0)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)).
+        if bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), N = 0, not(L = L2)) then insert(jobsLeft(A, L)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L))).
+		
 		forall bel(received(A, jobsLeft(L))) do delete(received(A, jobsLeft(L))).
 		
 		%forall bel(received(A, jobCount(Count)), not(jobCount(A, _))) do insert(jobCount(A, Count)) + delete(received(A, jobCount(Count))).

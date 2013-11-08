@@ -87,9 +87,9 @@ main module{
 		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)) + adopt(updatePlan).
 		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f), not(elevatorFull)) then delete( gotoFloor(L, Dir, f), fButtonOn(L, Dir))  + adopt(updatePlan).
 
-		if bel(free, jobsLeft(L)) then send(manager, jobsLeft(L)).
-		
 		if goal(updatePlan) then drop(updatePlan) + updatePlan.
+		
+		if bel(free, jobsLeft(L)) then send(manager, jobsLeft(L)).
 		%if a-goal( atFloor(Level), dir(Dir) ) then goto(Level, Dir).
 		%if goal(atFloor(Level)), bel( findall(levelQuality(Level, Q), 
 	}
@@ -114,7 +114,7 @@ event module{
 		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
 		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
-		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do send(manager, atFloor(Level) ) + insert( atFloor(Level) ).
+		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do insert( atFloor(Level) ).
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% Send to the manager where the client wants to go
@@ -130,7 +130,7 @@ event module{
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
 		forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) )+insert( not(doorState(Old)), doorState(New) ).		
 		
-		forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
+		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
 		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
