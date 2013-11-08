@@ -28,7 +28,7 @@ init module {
 			
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
-		%maxFS(Level, Dir, Elevators, A):- maxFS(Elevators, elevatorQuality(A, Q)).
+		maxFS(Level, Dir, Elevators, A):- maxFS(Elevators, elevatorQuality(A, Q)).
 		maxFS(Level, Dir, A) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(A, Q)).
 		
 		maxFS([elevatorQuality(A, Q)], elevatorQuality(A, Q)). 
@@ -94,8 +94,7 @@ main module{
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A), jobsAssignedSinceUpdate(A, N), N2 is N + 1)
 			then send(A, goto(Level,Dir)) + insert(jobsAssignedSinceUpdate(A, N2)) + delete(jobsAssignedSinceUpdate(A, N)) + drop(sendElevator(Level,Dir)).
 		
-		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(%findall(A, (agent(A), free(A)), L), 
-			maxFS(Level,Dir, A)) then send(A, goto(Level, Dir)).
+		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(findall(A2, (free(A2)), L), maxFS(Level,Dir, L, A)) then send(A, goto(Level, Dir)).
 	}
 }
 

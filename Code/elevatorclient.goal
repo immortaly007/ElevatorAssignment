@@ -122,8 +122,8 @@ event module{
 		forall bel( percept(eButtonOn(Level)), dir(Dir), not(gotoFloor(Level, Dir, e) )) do insert(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
 
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
+		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))), gotoFloor(Level, Dir, f)) do delete(gotoFloor(Level, Dir, f)) + adopt(updatePlan).
 		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do send( manager, delFButtonOn(Level, Dir) )+delete( fButtonOn(Level,Dir) ).
-		forall bel(percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)), gotoFloor(Level, Dir, f)) do delete(gotoFloor(Level, Dir, f)) + adopt(updatePlan).
 		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
 		
 		% The doorState percept is received only if the door state has changed.
@@ -133,6 +133,8 @@ event module{
 		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
 		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
+		
+		
 		
 		%if bel(free) then send(manager, free).
 		
