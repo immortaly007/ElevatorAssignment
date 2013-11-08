@@ -84,7 +84,11 @@ main module{
 		if a-goal(agentsEnumerated), bel( elevator(A), not(elevatorNr(A, _)), elevatorNrs(L), max_list(L, Max), ToAssign is Max + 1 ) then insert(elevatorNr(A, ToAssign)).
 		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, gotoOnce(Level, up)) + insert(sendElevatorToBestFloor(A)).
 		
-		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A)) then send(A, goto(Level,Dir))+drop(sendElevator(Level,Dir)) + delete(free(A)).
+		
+		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A))
+			then send(A, goto(Level,Dir)) + drop(sendElevator(Level,Dir)).
+		
+		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(maxFS(Level,Dir,A)) then send(A, goto(Level, Dir)).
 	}
 }
 
@@ -123,8 +127,9 @@ main module{
 		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, dir(Dir) ),moveDir(A,OldDir) ).
 		
 		% Update jobsLeft
-		forall bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) do insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
-		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2)) do insert(jobsLeft(A, L)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L))).
+		if bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) then insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
+		if bel(received(A, jobsLeft(L)), jobsLeft(A, L2)) then insert(jobsLeft(A, L)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L))).
+		forall bel(received(A, jobsLeft(L))) do delete(received(A, jobsLeft(L))).
 		
 		%forall bel(received(A, jobCount(Count)), not(jobCount(A, _))) do insert(jobCount(A, Count)) + delete(received(A, jobCount(Count))).
 		%forall bel(received(A, jobCount(Count)), jobCount(A, Count2)) do insert(jobCount(A, Count)) + delete(jobCount(A, Count2), received(A, jobCount(Count))).
