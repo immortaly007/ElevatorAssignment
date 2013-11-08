@@ -1,0 +1,31 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+
+%opening
+\title{The \textsc{Goal} Multi-agent Elevator Assignment}
+\author{Bas Dado \& Canran Gou}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This project concerns a building with a number of elevators. The goal of the project is to implement an algorithm that optimizes the average total time needed to move people to the floors they want to go. We use a modified version of the nearest car algorithm for the agents as the basic rule. The clients (elevators) do some percept work and sends this information to a manager. This manager will apply the algorithm to decide which client should get the job and assign to it.
+The clients themselves choose in which order they want to handle their assigned tasks.
+
+\section{The MAS design}
+The MAS consists of two types of agents: the so-called manager that is responsible for dividing the tasks, and the clients that execute these tasks. The manager is not connected to the environment and therefore communication is used to keep it up to date with the current state of the world. The manager then uses this information  to calculate the ``quality'' for each of the clients to take a certain task. The agent with the highest quality is assigned to that task. 
+
+Clients decide the order in which they execute their assigned tasks. To do this, clients use an equation similar to the one the manager uses the calculate the best agent, but they use it to calculate the best floor to visit next. Every time new information is received, the quality for all floors is re-evaluated and the elevator will go to the floor with the highest quality. This way it chooses the optimal path within it's current job list at all times.
+
+The communication happens in two directions: clients send their current job list and percepts to the manager, and the manager sends tasks to it's clients. Communication does not follow the contract net protocol for optimization reasons. The manager now has all information about the environments and all elevators and uses this information to calculate what would be the bids of each agent in the contract net protocol. The advantage of this is that the manager can use information about some client to influence the bid of another client. For example: the number of elevators is used and bonuses are added for the least busy clients. Of course one could add these bonuses after the bids are calculated within the clients themselves, but then the manager would still need to have all information about the world. In our opinion the advantages of our communication
+\subsection{Manager}
+
+
+\subsection{Clients}
+
+
+
+\end{document}
