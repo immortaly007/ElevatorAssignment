@@ -24,7 +24,7 @@ init module {
 			agentBonus(A, Level, B), Q is 1 + B.
 		
 		agentBonus(A, Level, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), elevatorBestFloor(A, BestFloor), 
-			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount), B is Bonus - Count*2 + (1/(BestFloorDistance+1)) * (Fl/ElevatorCount).
+			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount), B is Bonus - Count*2 + (1/(BestFloorDistance+1)) * (2*Fl/ElevatorCount).
 			
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
