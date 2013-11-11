@@ -149,10 +149,6 @@ event module{
 		if bel(jobsLeftUgly(L), makeNice(L, L2)) then insert(jobsLeft(L2)) + delete(jobsLeftUgly(L)). 
 		if not(goal(gotoFloor(A, B, C))) then insert(jobsLeft([])).
 		
-
-
-
-		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
 		%forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) )+insert( not(doorState(Old)), doorState(New) ).		
