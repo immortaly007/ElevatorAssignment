@@ -110,11 +110,10 @@ module updatePlan {
 
 event module{
 	program{
-	
 		forall bel(received(manager, resetJobs)), goal(gotoFloor(Level, Dir, f)) do delete(received(manager, resetJobs)) + drop(gotoFloor(Level, Dir, f)).
 		
 		% If the manager send any commands, put them in the queue to execute as soon as we're close.
-		forall bel(received(manager,goto(L, Dir))) do adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan) + delete(received(manager,goto(L,Dir))).
+		forall bel(received(manager,goto(L, Dir))) do delete(received(manager,goto(L, Dir))) + adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan).
 		
 		forall bel(jobsLeft(L)) do delete(jobsLeft(L)).
 		listall L <- goal(gotoFloor(A, B, C)) do insert(jobsLeftUgly(L)).
@@ -154,8 +153,8 @@ event module{
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
 		if bel(free), bel(jobsLeft(L)) then send(manager, jobsLeft(L)).
-		
-
+	
+		%forall bel(sent(X, Y)) do delete(sent(X, Y)).
 
 		
 		%if bel(free) then send(manager, free).
