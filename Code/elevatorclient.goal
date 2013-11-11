@@ -143,7 +143,9 @@ event module{
 		% If the manager send any commands, put them in the goal base
 		forall bel(received(manager,goto(L, Dir))) do delete(received(manager,goto(L, Dir))) + adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan).
 		
-		% 
+		% To calculate the best floor to go to a list is needed of all jobs currently in the goal.
+		% This is done by using listall to find all gotoFloor goals and then copying the result of this list into a new list. 
+		% If there are no gotoFloor goals left, an empty list is inserted
 		forall bel(jobsLeft(L)) do delete(jobsLeft(L)).
 		listall L <- goal(gotoFloor(A, B, C)) do insert(jobsLeftUgly(L)).
 		if bel(jobsLeftUgly(L), makeNice(L, L2)) then insert(jobsLeft(L2)) + delete(jobsLeftUgly(L)). 
@@ -151,7 +153,7 @@ event module{
 		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
-		%forall bel( percept(doorState(New)), doorState(Old) ) do send( manager, doorState(New) )+insert( not(doorState(Old)), doorState(New) ).		
+		forall bel( percept(doorState(New)), doorState(Old) ) do delete(doorState(Old)) + insert( doorState(New) ).		
 		
 		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
 		
@@ -160,16 +162,5 @@ event module{
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
 		if bel(free), bel(jobsLeft(L)) then send(manager, jobsLeft(L)).
-	
-		%forall bel(sent(X, Y)) do delete(sent(X, Y)).
-
-		
-		%if bel(free) then send(manager, free).
-		
-		%if bel(jobsLeft(L), not (sent(jobsLeft(L))), sent(jobsLeft(L2)), not (L = L2)) then send(manager, jobsLeft(L)) + delete(sent(jobsLeft(L2))).
-		%if bel(jobsLeft(L), not(sent(jobsLeft(L)))) then send(manager, jobsLeft(L)).
-		
-		%if bel(jobCount(Count), not(sent(jobCount(Count))), sent(jobCount(Count2)), not(Count = Count2))  then send(manager, jobCount(Count)) + delete(sent(jobCount(Count2))).
-		%if bel(jobCount(Count), not(sent(jobCount(Count)))) then send(manager, jobCount(Count)).
 	}
 }

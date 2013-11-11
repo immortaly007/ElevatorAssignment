@@ -1,17 +1,5 @@
 init module {
 	knowledge{
-		% insert knowledge here, if any, or remove section.
-	
-		%elevatorAtFloor(Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
-		
-		%elevatorAtFloor(A, Level, Dir):- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
-		%elevatorAtFloor(any, Level, Dir) :- elevatorAtFloor(A, Level), elevatorDir(A, Dir).
-		
-		%readyToSend(A, Level, Level2) :- free(A), elevatorAtFloor(A, Level2), not(Level = Level2).
-		
-	    %moveDir(A, Dir) :- moving(A, Level1, Level2), Diff is Level1 - Level2, (Diff < 0 -> Dir=up; Dir=down).
-		%moveDir(A, Dir) :- not(moving(A, _, _)), elevatorDir(A, Dir).
-
 		onRoute(A, Level) :- carPosition(A, Cur), moveDir(A, Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
 		
 		fs(A, Level, Dir, Q) :- jobsLeft(A, L), member(gotoFloor(Level, Dir, _), L), Q is 1000.
@@ -60,35 +48,26 @@ init module {
 	
 	
 	beliefs{
-		% insert initial beliefs here, if any, or remove section.
 		bonus(100).
 		
 	}
 	
 	goals{
-		% insert initial goals here, if any, or remove section.
 		pickLeadingAgent.
 		agentsEnumerated.
 		distributedAgents.
 	}
 	
 	program {
-        % insert one-time rules here, or remove section
 		forall bel(agent(A), not(me(A))) do insert(jobsAssignedSinceUpdate(A, 0), jobsLeft(A, []), carPosition(A, 0), people(A, 0)).
     }
 	
 	actionspec{
-		% insert global action specification here, if any, or remove section.
 	}
 }
 	
 main module{
 	program{
-		%if a-goal(elevatorAtFloor(A, Level, Dir)), bel(readyToSend(A, Level, OldLevel)) then
-			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
-		%if a-goal(elevatorAtFloor(any, Level, Dir)), bel(not(moving(_, OldLevel, Level)), readyToSend(A, Level, OldLevel) ) then 
-			%send( A, goto(Level, Dir) ) + delete(free(A), elevatorAtFloor(A, OldLevel)) + insert(moving(A, OldLevel, Level)).
-		
 		if goal(pickLeadingAgent), bel( elevator(A) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).
 		if a-goal(agentsEnumerated), bel( elevator(A), not(elevatorNr(A, _)), elevatorNrs(L), max_list(L, Max), ToAssign is Max + 1 ) then insert(elevatorNr(A, ToAssign)).
 		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, gotoOnce(Level, up)) + insert(sendElevatorToBestFloor(A)).
@@ -111,30 +90,15 @@ main module{
 		
 		forall bel( received(A,people(N)), people(A, N2)) do delete( people(A, N2),received(A,people(N)) ) + insert ( people(A, N) ).
 		
-		if bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) then delete(received(A,carPosition(L)), carPosition(A,L2)) + insert(carPosition(A,L) ).
-		%forall bel(received(A, carPosition(L))) do delete(received(A, carPosition(L))). 
-		
- 		% Receive and save the location of the clients to the believe base
-		%forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
-		%forall bel( received(A, atFloor(Level)), not(moving(A, Level2, Level)) ) do insert( elevatorAtFloor(A, Level)) + delete(received(A, atFloor(Level)) ).
-
-		% Receive and save what button the client pressed (eButtonPressed)
-		%forall bel( received(A,  eButtonOn(Level, Dir)) ) do insert( clientWantsToGo(A, Level, Dir) ) + delete( received(A, eButtonOn(Level, Dir)) ).
+		forall bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) do delete(received(A,carPosition(L)), carPosition(A,L2)) + insert(carPosition(A,L) ).
 		
 	    % fButtonOn processing (independent of elevator/client)
-	    forall bel( received(A, fButtonOn(Level, Dir)), leadingAgent(A) ) do insert( fButtonOn(Level, Dir) ) + delete( received(A, fButtonOn(Level, Dir)) ) + adopt(sendElevator(Level,Dir)).
+	    forall bel( received(A, fButtonOn(Level, Dir)), leadingAgent(A) ) do delete( received(A, fButtonOn(Level, Dir)) ) + insert( fButtonOn(Level, Dir) ) + adopt(sendElevator(Level,Dir)).
 		forall bel( received(A, fButtonOn(Level, Dir))) do delete( received(A, fButtonOn(Level, Dir)) ).
-		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(A, delFButtonOn(Level, Dir)) ).
-		                                                                                                                                                                               
-		% Process the doorstate for each client
-		%forall bel( received(A, doorState(New)), elevatorDoorState(A, Old), not(Old = New) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
-		%forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
-		
-		% Process free agents
-		%forall bel( received(A, free) ) do insert(free(A)) + delete(received(A, free) ).
+		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(A, delFButtonOn(Level, Dir)) ).		
 		
 		% Process directions
-		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do insert(moveDir(A, Dir) ) + delete(received(A, moveDir(Dir) ),moveDir(A,OldDir) ).
+		forall bel( received(A, moveDir(Dir)), moveDir(A,OldDir) ) do delete(received(A, moveDir(Dir) ),moveDir(A,OldDir) ) + insert(moveDir(A, Dir) ).
 		
 		% Update jobsLeft
 		%if bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) then insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
@@ -142,25 +106,6 @@ main module{
         forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), N = 0, not(L = L2)) do delete(jobsLeft(A, L2), received(A, jobsLeft(L))) + insert(jobsLeft(A, L)).
 		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), not(N = 0)) do delete(received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)) + insert(jobsAssignedSinceUpdate(A, 0)).
         forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), N = 0) do delete(received(A, jobsLeft(L))).
-
-		
-		%forall bel(received(A, jobCount(Count)), not(jobCount(A, _))) do insert(jobCount(A, Count)) + delete(received(A, jobCount(Count))).
-		%forall bel(received(A, jobCount(Count)), jobCount(A, Count2)) do insert(jobCount(A, Count)) + delete(jobCount(A, Count2), received(A, jobCount(Count))).
-		
-		
-		%forall bel( received(A, moveDir(Dir)), elevatorDir(A, Dir2), not(Dir = Dir2) ) do insert(elevatorDir(A, Dir) ) + delete(received(A, dir(Dir) ), elevatorDir(A, Dir2) ).
-		
-		%forall bel( elevatorAtFloor(A, Level), clientWantsToGo(A, Level, Dir), elevatorDoorState(A, opened) ) do delete(clientWantsToGo(A, Level, Dir)) .
-		
-		
-		%%%%%%%%%%%% Goal Management %%%%%%%%%%%
-		%forall bel( fButtonOn(Level, Dir), fs(A, Level, Dir, Q) ) do adopt( elevatorAtFloor(any, Level, Dir)) .
-		%forall bel( clientWantsToGo(A, Level, Dir) ) do adopt( elevatorAtFloor(A, Level, Dir)) + delete(clientWantsToGo(A, Level, Dir)).
-		
-		%%%%%%%%%%%% Sending Order %%%%%%%%%%%
-		%forall bel()
 		
 	}
 }
-
-% insert additional modules, if any, here.
