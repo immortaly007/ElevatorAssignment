@@ -1,64 +1,92 @@
 init module {
 	knowledge{
+		%See if client is on the route towards specific level with current position and direction
 		onRoute(A, Level) :- carPosition(A, Cur), moveDir(A, Dir), Diff is Cur - Level, (Diff<0 -> Dir = up; Dir=down).
 		
-		fs(A, Level, Dir, Q) :- jobsLeft(A, L), member(gotoFloor(Level, Dir, _), L), Q is 1000.
+		%Apply modified nearest car algorithm here to calculate fs value as Q for client
 		
+		%If a job is not in the job list of the client and client is onroute to the floor, we give FS = (N + 2) - d here as in report and plus the bonus.
 		fs(A, Level, Dir, Q) :- jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), 
 			agentBonus(A, Level, B), Q is ((Fl + 2) - abs(Cur - Level) + B).
+			
+		%If a job is not in the job list of the client and client is onroute to the floor, but the job is in the opposite direction, we give FS = (N + 1) - d here as in report and plus the bonus.
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), 
 			agentBonus(A, Level, B), Q is ((Fl + 1) - abs(Cur - Level) + B).
+			
+		%If a client is leaving a floor, we give FS=1 and plus bonus.
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), not(onRoute(A, Level)), 
 			agentBonus(A, Level, B), Q is 1 + B.
 		
+		%Calculate the bonus.
+		%If the elevator is free, we give it defaultbonus or we give it 0. If the elevator is full, we give it full penalty of 1000,or 0.
+		%The client gets more penalty with more job numbers and more bonus with the shorter distance between current floor and best expected floor.
 		agentBonus(A, Level, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), elevatorBestFloor(A, BestFloor), 
 			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount),
 			(elevatorFull(A) -> FullPenalty = 1000; FullPenalty = 0), 
 			B is Bonus - Count*2 + (1/(BestFloorDistance+1)) * (2*Fl/ElevatorCount) - FullPenalty.
-			
+		
+		%Check if the elevator is full
 		elevatorFull(A) :- people(A, N), capacity(A, N). 
-			
+		
+		%Build a list for all fs values for a specific level and direction
 		listFS(Level, Dir, L) :- findall(elevatorQuality(A, Q), fs(A, Level, Dir, Q), L).
 		
+		%Find the maximal fs for a specific level and direction
 		maxFS(Level, Dir, A) :- listFS(Level, Dir, L), maxFS(L, elevatorQuality(A, Q)).
 		
+		%Find the maximal fs from the list.
 		maxFS([elevatorQuality(A, Q)], elevatorQuality(A, Q)). 
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A, Q)) :- maxFS(T, elevatorQuality(A2, Q2)), Q >= Q2.
 		maxFS([elevatorQuality(A, Q) | T], elevatorQuality(A2, Q2)) :- maxFS(T, elevatorQuality(A2, Q2)), Q2 > Q.
 		
+		%Count the current job number of client including newly assigned ones.
 		jobCount(A, N) :- jobsLeft(A, L), length(L, Actual), jobsAssignedSinceUpdate(A, New), N is Actual + New.	
-
+		
+		%Check if a client is free.
 		free(A) :- jobCount(A, N), N = 0.
 		
+		%Check if an agent is a client but not manager.
 		elevator(A) :- agent(A), not(me(A)).
 		
+		%Check if the number of elevators has been known.
 		agentsNotEnumerated :- elevator(A), not(elevatorNr(A, _)).
 		agentsEnumerated :- not(agentsNotEnumerated).
 		
+		%Count the number of elevators.
 		elevatorNrs([0]) :- not(elevatorNr(_, _)).
 		elevatorNrs(L) :- findall(N, elevatorNr(_, N), L).
 		
+		%While there're no fButton pressed, we assign each elevator to go an expected level to cover as much levels as possible at first.
+		%Calculate the expected level at first by giving client a index and multiply the number of floors and the ratio of index in total elevator number.
 		elevatorBestFloor(A, Level) :- elevatorNr(A, Nr), floorCount(A, Fl), elevatorNrs(L), max_list(L, ElevatorCount), Level is round(((Fl - 1) / ElevatorCount) * Nr) - 1.
 		
+		%Check and distribute agents.
 		notDistributedAgents :- elevator(A), not(sendElevatorToBestFloor(A)).
 		distributedAgents :- not(notDistributedAgents).
 		
+		% Count the number of elevators.
 		elevatorCount(ElevatorCount) :- elevatorNrs(L), max_list(L, ElevatorCount).
 	}                                                     
 	
 	
 	beliefs{
+		% Default bonus for free elevators.
 		bonus(100).
 		
 	}
 	
 	goals{
+		% Something have to be done at first.
+		% Pickup the leading agent so as to listen to fButton events.
 		pickLeadingAgent.
+		% Count the number of elevators.
 		agentsEnumerated.
+		% Distribute agents to their respective postion to cover more floors.
 		distributedAgents.
 	}
 	
 	program {
+		% For all agents, they have no tasks at first.
 		forall bel(agent(A), not(me(A))) do insert(jobsAssignedSinceUpdate(A, 0), jobsLeft(A, []), carPosition(A, 0), people(A, 0)).
     }
 	
@@ -68,16 +96,21 @@ init module {
 	
 main module{
 	program{
+		% Pick up the leading agent to communicate about status of fButtons.
 		if goal(pickLeadingAgent), bel( elevator(A) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).
+		% Enumerate elevators and assign each of them a number.
 		if a-goal(agentsEnumerated), bel( elevator(A), not(elevatorNr(A, _)), elevatorNrs(L), max_list(L, Max), ToAssign is Max + 1 ) then insert(elevatorNr(A, ToAssign)).
+		% Send the elevators to the initial best expected floors.
 		forall a-goal(distributedAgents), bel( elevatorBestFloor(A, Level), not(sendElevatorToBestFloor(A)) ) do send(A, gotoOnce(Level, up)) + insert(sendElevatorToBestFloor(A)).
 		
-		
+		% Send goto commands to client with maximal fs value and record the jobs updated number.
 		if a-goal(sendElevator(Level,Dir)),bel(maxFS(Level,Dir,A), jobsAssignedSinceUpdate(A, N), N2 is N + 1)
 			then send(A, goto(Level,Dir)) + insert(jobsAssignedSinceUpdate(A, N2)) + delete(jobsAssignedSinceUpdate(A, N)) + drop(sendElevator(Level,Dir)).
 		
+		% See if the elevators leave without picking up everyone(it's full), if so then adopt the goal again to send another elevator to the floor.
 		forall bel(received(A, pickup(Level, Dir)), fButtonOn(Level, Dir)) do adopt(sendElevator(Level, Dir)) + delete(received(A, pickup(Level, Dir))).	
-			
+		
+		% If there're free elevators, send them to the undone fButton place of max fs value each of them.
 		if bel(fButtonOn(Level, Dir), free(A)), not(a-goal(sendElevator(Level, Dir))), bel(findall(elevatorQuality(A2, Q), (free(A2), fs(A2, Level, Dir, Q)), L), maxFS(L, elevatorQuality(A, Q))) then send(A, goto(Level, Dir)).
 	}
 }
