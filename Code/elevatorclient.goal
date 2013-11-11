@@ -29,7 +29,13 @@ init module {
 		
 		free :- not(moving(_, _)), jobsLeft(L), length(L, N),  N = 0.
 		
-		jobsLeft(L) :-  findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L).
+		%jobsLeft(L) :-  findall(gotoFloor(Level, Dir, Type), gotoFloor(Level, Dir, Type), L).
+		
+		gotoFloor(L, Dir, e) :- atFloor(L).
+		gotoFloor(L, Dir, f) :- atFloor(L), dir(Dir).
+		
+		makeNice([], []).
+		makeNice([[Level, Dir, Type]|T], [gotoFloor(Level, Dir, Type)|T2]) :- makeNice(T, T2).
 	}
 	
 	beliefs{
@@ -76,18 +82,17 @@ main module{
 		if goal(sendFirstUpdate) then send(manager, jobsLeft([])) + drop(sendFirstUpdate).
 		
 		% Adopt the auto distribution goal.
-		forall bel(received(manager, gotoOnce(L, Dir))) do goto(L, Dir) + delete(received(manager, gotoOnce(L, Dir)) ).
+		forall bel(received(manager, gotoOnce(L, Dir)), atFloor(AtL)) do goto(L, Dir) + insert(moving(AtL, L)) + delete(received(manager, gotoOnce(L, Dir)) ).
 				
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
-		forall bel( atFloor(L), gotoFloor(L, Dir, e)) do delete( gotoFloor(L, Dir, e)).
-		if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) then delete( gotoFloor(L, Dir, f)) + send(manager, pickup(L, Dir)).
+		%forall bel( atFloor(L)) goal(gotoFloor(L, Dir, e)) do drop( gotoFloor(L, Dir, e)).
+		%if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) then delete( gotoFloor(L, Dir, f)) + send(manager, pickup(L, Dir)).
 		
 		if bel(atFloor(L)) then adopt(updatePlan).
 		
 		if goal(updatePlan) then drop(updatePlan) + updatePlan.
 		
-		if bel(free, jobsLeft(L)) then send(manager, jobsLeft(L)).
 		%if a-goal( atFloor(Level), dir(Dir) ) then goto(Level, Dir).
 		%if goal(atFloor(Level)), bel( findall(levelQuality(Level, Q), 
 	}
@@ -96,17 +101,25 @@ main module{
 module updatePlan {
 	program {
 		% Goto the nearest floor that the agent wants to go to.
-		if bel(carPosition(Cur), moving(L1, L2), jobsLeft(L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
+		if bel(jobsLeft(L), carPosition(Cur), moving(L1, L2), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
 			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2)) + send(manager, jobsLeft(L)) .
-		if bel(carPosition(Cur), jobsLeft(L), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
+		if bel(jobsLeft(L), carPosition(Cur), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
 			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + send(manager, jobsLeft(L)) .
 	}
 }
 
 event module{
 	program{
+	
+		forall bel(received(manager, resetJobs)), goal(gotoFloor(Level, Dir, f)) do delete(received(manager, resetJobs)) + drop(gotoFloor(Level, Dir, f)).
+		
 		% If the manager send any commands, put them in the queue to execute as soon as we're close.
-		forall bel(received(manager,goto(L, Dir))) do insert(gotoFloor(L, Dir, f)) +delete(received(manager,goto(L,Dir))) + adopt(updatePlan).
+		forall bel(received(manager,goto(L, Dir))) do adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan) + delete(received(manager,goto(L,Dir))).
+		
+		forall bel(jobsLeft(L)) do delete(jobsLeft(L)).
+		listall L <- goal(gotoFloor(A, B, C)) do insert(jobsLeftUgly(L)).
+		if bel(jobsLeftUgly(L), makeNice(L, L2)) then insert(jobsLeft(L2)) + delete(jobsLeftUgly(L)). 
+		if not(goal(gotoFloor(A, B, C))) then insert(jobsLeft([])).
 		
 		%%%%% Percept Processing %%%%%
 		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ) + insert(capacity(N)).
@@ -114,18 +127,21 @@ event module{
 		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) )  + insert(floorCount(N)).
 		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
-		% The atFloor(Level) percept is received only when elevator has stopped at a floor Level.
+		% The atFloor(Level) percept is received only when elevator has st opped at a floor Level.
 		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do insert( atFloor(Level) ).
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
-		% Send to the manager where the client wants to go
-		forall bel( percept(eButtonOn(Level)), gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do insert(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
-		forall bel( percept(eButtonOn(Level)), dir(Dir), not(gotoFloor(Level, Dir, e) )) do insert(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
+		% For each eButton press adopt goal to go there
+		forall bel( percept(eButtonOn(Level)) ), a-goal(gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do adopt(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
+		forall bel( percept(eButtonOn(Level)), dir(Dir)) do adopt(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
 
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
-		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))), gotoFloor(Level, Dir, f)) do delete(gotoFloor(Level, Dir, f)) + adopt(updatePlan).
+		% If an fButton stopped being pressed, send the manager that the fButton is no longer pressed
 		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do send( manager, delFButtonOn(Level, Dir) )+delete( fButtonOn(Level,Dir) ).
+		% If a new fButton is pressed, send it to the manager
 		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
+		% If an fButton is no longer pressed, drop the goal to go there
+		forall goal(gotoFloor(Level, Dir, f)), bel(not(percept(fButtonOn(Level,Dir)))) do drop(gotoFloor(Level, Dir, f)) + adopt(updatePlan).
 		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
@@ -133,9 +149,14 @@ event module{
 		
 		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
 		
+		forall goal(gotoFloor(Level, Dir, e), gotoFloor(Level, Dir2, f), not(Dir = Dir2)) do drop(gotoFloor(Level, Dir, e)) + insert(gotoFloor(Level, Dir2, e)).
+		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
+		if bel(free), bel(jobsLeft(L)) then send(manager, jobsLeft(L)).
 		
+
+
 		
 		%if bel(free) then send(manager, free).
 		

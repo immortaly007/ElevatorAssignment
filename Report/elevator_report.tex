@@ -1,7 +1,8 @@
-\documentclass[a4paper,10pt]{article}
+\documentclass[a4paper,10pt,twocolumn]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
+%\usepackage[margin=1in]{geometry}
 
 %opening
 \title{The \textsc{Goal} Multi-agent Elevator Assignment}
@@ -20,11 +21,13 @@ The MAS consists of two types of agents: the so-called manager that is responsib
 
 Clients decide the order in which they execute their assigned tasks. To do this, clients use an equation similar to the one the manager uses the calculate the best agent, but they use it to calculate the best floor to visit next. Every time new information is received, the quality for all floors is re-evaluated and the elevator will go to the floor with the highest quality. This way it chooses the optimal path within it's current job list at all times.
 
-The communication happens in two directions: clients send their current job list and percepts to the manager, and the manager sends tasks to it's clients. Communication does not follow the contract net protocol for optimization reasons. The manager now has all information about the environments and all elevators and uses this information to calculate what would be the bids of each agent in the contract net protocol. The advantage of this is that the manager can use information about some client to influence the bid of another client. For example: the number of elevators is used and bonuses are added for the least busy clients. Of course one could add these bonuses after the bids are calculated within the clients themselves, but then the manager would still need to have all information about the world. In our opinion the advantages of our communication
+The communication happens in two directions: clients send their current job list and percepts to the manager, and the manager sends tasks to it's clients. Communication does not follow the contract net protocol for optimization reasons. The manager now has all information about the environments and all elevators and uses this information to calculate what would be the bids of each agent in the contract net protocol. The advantage of this is that the manager can use information about some client to influence the bid of another client. For example: the number of elevators is used and bonuses are added for the least busy clients. Of course one could add these bonuses after the bids are calculated within the clients themselves, but then the manager would still need to have all information about the world. It also would require some wait time for all bids to come in, which will decrease the decision making speed. In our opinion the advantages of our simple communication outweigh those of the contract net protocol.
+
 \subsection{Manager}
 
 
 \subsection{Clients}
+Clients have a few tasks they need to handle. F
 
 
 
