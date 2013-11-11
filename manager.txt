@@ -1,0 +1,13 @@
+An introduction to the assignment
+
+The goal of the project is to optimize the average total time needed to move people to the floors they want to go.
+We use a modified nearest car algorithm for the agents as the basic rule.
+Clients do some percept work and send some basic information to manager. Manager will apply the algorithm to decide which client should get the job and assign to it.
+
+The manager takes information such as carPosition, movedirection, the status of pressed fbutton, number of people inside and job list from clients. Then use them to determine which client is best for a specific task by nearest car algorithm and then assign the job by sending mail to that client.
+
+In the knowledge base of manager, we implements the modified nearest car algorithm. We receive the job list of every client in event module and use it to update the FS values as seeing if any current goals are member of job list. The basic rule for this equation is: If an elevator is moving towards a call, and the call is in the same direction, FS = (N + 2) - d, where N is one less than the number of floors in the building, and d is the distance in floors between the elevator and the passenger call. And for the call in the opposite direction, we have FS = (N + 1) - d. In the end if the elevator is moving away from the point of call, FS = 1.With this equation we calculate FS value for each agent for each floor and direction, then we may use them to decide which agent shall be chosen when there's a new task.
+
+Besides, we modified the algorithm by adding a bonus-penalty system to improve the perfermance. For example, if there's a free elevator, we want to make use of them so give it a bonus to make it work again.Full elevator,of course, got a high penalty to prevent it stopping by. To control the workload balance of elevators, we take the current task number as a factor for penalty to assign jobs more evenly.
+
+In the main module, we choose the leading-agent, to which the manager will listen about fButton and deletefButton events. We choose it to avoid multiple inserting and deleting operations of fButton. Then the manager will check goal base to pick a goal and find the agent with best FS value of the goal, then send goto command to it. There are two situations we care in the end, one is when a elevator leave after finishing picking up people, it will check if the respective fbutton is still on(there're still people there), and send another elevator to it if so, and finally we'll check if there're free elevators and assign jobs to keep them working.
