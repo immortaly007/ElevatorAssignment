@@ -17,7 +17,7 @@ This project concerns a building with a number of elevators. The goal of the pro
 The clients themselves choose in which order they want to handle their assigned tasks.
 
 \section{The MAS design}
-The MAS consists of two types of agents: the so-called manager that is responsible for dividing the tasks, and the clients that execute these tasks. The manager is not connected to the environment and therefore communication is used to keep it up to date with the current state of the world. The manager then uses this information  to calculate the ``quality'' for each of the clients to take a certain task. The agent with the highest quality is assigned to that task. 
+The MAS consists of two types of agents: the so-called manager that is responsible for dividing the tasks, and the clients that execute these tasks. The manager is not connected to the environment and therefore communication is used to keep it up to date with the current state of the world. The manager uses this information  to calculate the ``quality'' for each of the clients to take handle service a floor on which people are waiting. The agent with the highest quality is assigned to that task. 
 
 Clients decide the order in which they execute their assigned tasks. To do this, clients use an equation similar to the one the manager uses the calculate the best agent, but they use it to calculate the best floor to visit next. Every time new information is received, the quality for all floors is re-evaluated and the elevator will go to the floor with the highest quality. This way it chooses the optimal path within it's current job list at all times.
 
@@ -27,7 +27,8 @@ The communication happens in two directions: clients send their current job list
 
 
 \subsection{Clients}
-Clients have a few tasks they need to handle. F
+Clients need to handle several tasks. First of all they need to percepts and process the environment. This is done, as expected in \textsc{goal}, in the event module. The advantage of using the event module for percepts is that every statement in the event module gets executed in each cycle of the agent. This is exactly what we want for percepts like \texttt{fButton}, \texttt{eButton}, \texttt{carPosition}, \texttt{people} and \texttt{atFloor}. Note that only if the percept changes, this is send to the manager. For fButtons, when 
+
 
 
 

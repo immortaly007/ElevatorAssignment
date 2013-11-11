@@ -106,13 +106,13 @@ main module{
  event module{
 	 program{		 
 		% Receive some constants and current states
-		forall bel( received(A,capacity(N) )) do insert( capacity(A,N) ) + delete( received(A,capacity(N)) ) .
-		forall bel( received(A,floorCount(N) )) do insert(floorCount(A,N) ) + delete(received(A,floorCount(N) )).
+		forall bel( received(A,capacity(N) )) do delete( received(A,capacity(N)) ) + insert( capacity(A,N) ).
+		forall bel( received(A,floorCount(N) )) do delete(received(A,floorCount(N) )) + insert(floorCount(A,N) ).
 		
-		forall bel( received(A,people(N)), people(A, N2)) do insert ( people(A, N) ) + delete( people(A, N2),received(A,people(N)) ).
+		forall bel( received(A,people(N)), people(A, N2)) do delete( people(A, N2),received(A,people(N)) ) + insert ( people(A, N) ).
 		
-		if bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) then insert(carPosition(A,L) ) + delete(carPosition(A,L2),received(A,carPosition(L))).
-		forall bel(received(A, carPosition(L))) do delete(received(A, carPosition(L))). 
+		if bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) then delete(received(A,carPosition(L)), carPosition(A,L2)) + insert(carPosition(A,L) ).
+		%forall bel(received(A, carPosition(L))) do delete(received(A, carPosition(L))). 
 		
  		% Receive and save the location of the clients to the believe base
 		%forall bel( received(A, atFloor(Level)), moving(A, Level2, Level) ) do insert( elevatorAtFloor(A, Level)) + delete( received(A, atFloor(Level)), moving(A, Level2, Level) ).
@@ -125,7 +125,7 @@ main module{
 	    forall bel( received(A, fButtonOn(Level, Dir)), leadingAgent(A) ) do insert( fButtonOn(Level, Dir) ) + delete( received(A, fButtonOn(Level, Dir)) ) + adopt(sendElevator(Level,Dir)).
 		forall bel( received(A, fButtonOn(Level, Dir))) do delete( received(A, fButtonOn(Level, Dir)) ).
 		forall bel( received(A, delFButtonOn(Level, Dir)) ) do delete( fButtonOn(Level, Dir), received(A, delFButtonOn(Level, Dir)) ).
-		
+		                                                                                                                                                                               
 		% Process the doorstate for each client
 		%forall bel( received(A, doorState(New)), elevatorDoorState(A, Old), not(Old = New) ) do insert ( elevatorDoorState(A, New) ) + delete( elevatorDoorState(A, Old), received(A, doorState(New)) ).
 		%forall bel( received(A, doorState(New)), not(elevatorDoorState(A, Old)) ) do insert ( elevatorDoorState(A, New) ) + delete( received(A, doorState(New)) ).
@@ -138,9 +138,9 @@ main module{
 		
 		% Update jobsLeft
 		%if bel(received(A, jobsLeft(L)), not (jobsLeft(A, _)) ) then insert(jobsLeft(A, L)) + delete(received(A, jobsLeft(L))).
-		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), not(N = 0), not(L = L2)) do insert(jobsLeft(A, L), jobsAssignedSinceUpdate(A, 0)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)).
-        forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), N = 0, not(L = L2)) do insert(jobsLeft(A, L)) + delete(jobsLeft(A, L2), received(A, jobsLeft(L))).
-		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), not(N = 0)) do insert(jobsAssignedSinceUpdate(A, 0)) + delete(received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)).
+		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), not(N = 0), not(L = L2)) do delete(jobsLeft(A, L2), received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)) + insert(jobsLeft(A, L), jobsAssignedSinceUpdate(A, 0)).
+        forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), N = 0, not(L = L2)) do delete(jobsLeft(A, L2), received(A, jobsLeft(L))) + insert(jobsLeft(A, L)).
+		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), not(N = 0)) do delete(received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)) + insert(jobsAssignedSinceUpdate(A, 0)).
         forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), N = 0) do delete(received(A, jobsLeft(L))).
 
 		

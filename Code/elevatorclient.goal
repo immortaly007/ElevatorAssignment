@@ -110,20 +110,16 @@ module updatePlan {
 
 event module{
 	program{
-		forall bel(received(manager, resetJobs)), goal(gotoFloor(Level, Dir, f)) do delete(received(manager, resetJobs)) + drop(gotoFloor(Level, Dir, f)).
-		
-		% If the manager send any commands, put them in the queue to execute as soon as we're close.
-		forall bel(received(manager,goto(L, Dir))) do delete(received(manager,goto(L, Dir))) + adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan).
-		
-		forall bel(jobsLeft(L)) do delete(jobsLeft(L)).
-		listall L <- goal(gotoFloor(A, B, C)) do insert(jobsLeftUgly(L)).
-		if bel(jobsLeftUgly(L), makeNice(L, L2)) then insert(jobsLeft(L2)) + delete(jobsLeftUgly(L)). 
-		if not(goal(gotoFloor(A, B, C))) then insert(jobsLeft([])).
-		
 		%%%%% Percept Processing %%%%%
+		
+		% Capacity is the number of people that fit in the elevator
 		forall bel( percept(capacity(N) )) do send(manager, capacity(N) ) + insert(capacity(N)).
-		forall bel( percept(people(N) ), people(N2), not(N = N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
+		% floorCount in the number of floors in the elevator
 		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) )  + insert(floorCount(N)).
+		
+		% People is the number of people currently in the elevator
+		forall bel( percept(people(N) ), people(N2), not(N = N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
+		% carPosition is the exact position of the car. Because the manager gets flooded with messages if each car position is send, it only gets send when it changes by more then a quarter of a floor. 
 		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
 		% The atFloor(Level) percept is received only when elevator has st opped at a floor Level.
@@ -131,9 +127,9 @@ event module{
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% For each eButton press adopt goal to go there
-		forall bel( percept(eButtonOn(Level)) ), a-goal(gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do adopt(gotoFloor(Level, Dir2, e)) + adopt(updatePlan). 
+		forall bel( percept(eButtonOn(Level)) ), a-goal(gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do adopt(updatePlan) + adopt(gotoFloor(Level, Dir2, e)). 
 		forall bel( percept(eButtonOn(Level)), dir(Dir)) do adopt(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
-
+		
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
 		% If an fButton stopped being pressed, send the manager that the fButton is no longer pressed
 		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do send( manager, delFButtonOn(Level, Dir) )+delete( fButtonOn(Level,Dir) ).
@@ -141,6 +137,21 @@ event module{
 		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
 		% If an fButton is no longer pressed, drop the goal to go there
 		forall goal(gotoFloor(Level, Dir, f)), bel(not(percept(fButtonOn(Level,Dir)))) do drop(gotoFloor(Level, Dir, f)) + adopt(updatePlan).
+		
+		%%%%% Message processing %%%%%%%%%
+		
+		% If the manager send any commands, put them in the goal base
+		forall bel(received(manager,goto(L, Dir))) do delete(received(manager,goto(L, Dir))) + adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan).
+		
+		% 
+		forall bel(jobsLeft(L)) do delete(jobsLeft(L)).
+		listall L <- goal(gotoFloor(A, B, C)) do insert(jobsLeftUgly(L)).
+		if bel(jobsLeftUgly(L), makeNice(L, L2)) then insert(jobsLeft(L2)) + delete(jobsLeftUgly(L)). 
+		if not(goal(gotoFloor(A, B, C))) then insert(jobsLeft([])).
+		
+
+
+
 		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
