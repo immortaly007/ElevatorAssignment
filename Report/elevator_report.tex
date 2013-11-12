@@ -43,11 +43,20 @@ Nearest car was modified using bonuses and penalties to perform better in certai
 
 
 \subsection{Manager}
-The manager takes environmental information such as the \texttt{carPosition}, \texttt{moveDirection} and current jobs for each elevator, and the status of all \texttt{fButtons}. When a new task appears (an \texttt{fButton} is pressed), it uses the information it has about the environment to determine which client is the best choice for this specific task by nearest car algorithm and then assign the job by sending mail to that client.
+The manager takes environmental information such as the \texttt{carPosition}, \texttt{moveDirection} and current jobs for each elevator, and the status of all \texttt{fButtons}. When a new task appears (an \texttt{fButton} is pressed), it uses the information it has about the environment to determine which client is the best choice for this specific task. It does this by calculating the $FS$ and adding some bonus $B$. This bonus is determined by applying each of the following rules:
+\begin{itemize}
+ \item If the elevator has no jobs it is currently working on, the \texttt{defaultBonus} is added.
+ \item The number of jobs as elevator currently has assigned (and not finished yet) is multiplied by $2$ and subtracted.
+ \item If the elevator is full and can therefore not carry any more people, a penalty of $1000$ is subtracted from the bonus. This is a relatively huge number compared to the value of $FS$ and the rest of the bonuses. Therefore the task will always go to an elevator that is not full if such an elevator is available.
+ \item 
+\end{itemize}
 
-In the final algorithm some elements of the fixed sectoring algorithm are used as well. This was done because trial and error showed that, because in most test cases, a lot of floors require service pretty quickly after the environment is started. This means that floors require service before the elevators are divided evenly over the building. The nearest car algorithm 
 
-In the knowledge base of manager, we implements the modified nearest car algorithm. We receive the job list of every client in event module and use it to update the $FS$ values as seeing if any current goals are member of job list. The basic rule for this equation is:
+
+
+In the final algorithm some elements of the static sectoring algorithm are used as well. This was done because a lot of floors require service pretty quickly after the environment is started. This means that floors require service before the elevators are divided evenly over the building. The nearest car algorithm will then keep the elevators close together and assign the tasks sort of randomly.
+
+In the knowledge base of manager, we implement the modified nearest car algorithm. We receive the job list of every client in event module and use it to update the $FS$ values as seeing if any current goals are member of job list. The basic rule for this equation is:
 
 
 

@@ -52,6 +52,10 @@ init module {
 		sent(moveDir(nothing)).
 		
 		people(0).
+		
+		managerBeliefs(people(0)).
+		managerBeliefs(jobsLeft([])).
+		managerBeliefs(carPosition(0)).
 	}
 	
 	goals{
@@ -101,15 +105,20 @@ main module{
 module updatePlan {
 	program {
 		% Goto the nearest floor that the agent wants to go to.
-		if bel(jobsLeft(L), carPosition(Cur), moving(L1, L2), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
-			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + delete(moving(L1, L2)) + send(manager, jobsLeft(L)) .
-		if bel(jobsLeft(L), carPosition(Cur), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) 
-			then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)) + send(manager, jobsLeft(L)) .
+		if bel(jobsLeft(L), carPosition(Cur), calculateFS(L, FSL), maxFS(FSL, levelQuality(BestLevel, BestDir, Q))) then {
+			if bel(moving(L1, L2)) 
+				then goto(BestLevel, BestDir) + delete(moving(L1, L2)) + insert(moving(Cur, BestLevel)).
+			if true
+				then goto(BestLevel, BestDir) + insert(moving(Cur, BestLevel)).
+		}
 	}
 }
 
 event module{
 	program{
+		if bel(managerReady) then delete(managerReady).
+		forall bel(received(manager, readyForMore)) do delete(received(manager, readyForMore)) + insert(managerReady).
+		
 		%%%%% Percept Processing %%%%%
 		
 		% Capacity is the number of people that fit in the elevator
@@ -118,9 +127,11 @@ event module{
 		forall bel( percept(floorCount(N) )) do send(manager, floorCount(N) )  + insert(floorCount(N)).
 		
 		% People is the number of people currently in the elevator
-		forall bel( percept(people(N) ), people(N2), not(N = N2)) do send(manager, people(N) ) + insert(people(N)) + delete(people(N2)).
+		forall bel( percept(people(N) ), people(N2), not(N = N2)) do insert(people(N)) + delete(people(N2)).
+		
+		
 		% carPosition is the exact position of the car. Because the manager gets flooded with messages if each car position is send, it only gets send when it changes by more then a quarter of a floor. 
-		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do send(manager, carPosition(RoundedL)) + insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
+		forall bel( percept(carPosition(L) ), carPosition(L2), RoundedL is round(L*4) / 4, not(RoundedL = L2 )) do insert( carPosition(RoundedL) ) + delete(carPosition(L2) ).
 		
 		% The atFloor(Level) percept is received only when elevator has st opped at a floor Level.
 		forall bel( percept(atFloor(Level)), not(atFloor(Level)) ) do insert( atFloor(Level) ).
@@ -156,11 +167,15 @@ event module{
 		forall bel( percept(doorState(New)), doorState(Old) ) do delete(doorState(Old)) + insert( doorState(New) ).		
 		
 		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
+		forall bel(managerReady, managerBeliefs(carPosition(L)), not(carPosition(L)), carPosition(L2)) do send(manager, carPosition(L2)) +delete(managerBeliefs(carPosition(L))) + insert(managerBeliefs(carPosition(L2))). 
+		forall bel(managerReady, managerBeliefs(people(N)), not(people(N)), people(N2)) do send(manager, people(N2)) + delete(managerBeliefs(people(N))) + insert(managerBeliefs(people(N2))).
+		forall bel(managerReady, managerBeliefs(jobsLeft(L)), not(jobsLeft(L)), jobsLeft(L2)) do send(manager, jobsLeft(L)) + delete(managerBeliefs(jobsLeft(L))) + insert(managerBeliefs(jobsLeft(L2))).
 		
 		forall goal(gotoFloor(Level, Dir, e), gotoFloor(Level, Dir2, f), not(Dir = Dir2)) do drop(gotoFloor(Level, Dir, e)) + insert(gotoFloor(Level, Dir2, e)).
 		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
 		if bel(free), bel(jobsLeft(L)) then send(manager, jobsLeft(L)).
+	
 	}
 }

@@ -5,6 +5,9 @@ init module {
 		
 		%Apply modified nearest car algorithm here to calculate fs value as Q for client
 		
+		% If there's already an elevator assigned to that job, assign it again.
+		fs(A, Level, Dir, Q) :- jobsLeft(A, L), member(gotoFloor(Level, Dir, _), L), Q is 1000.
+		
 		%If a job is not in the job list of the client and client is onroute to the floor, we give FS = (N + 2) - d here as in report and plus the bonus.
 		fs(A, Level, Dir, Q) :- jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir), onRoute(A, Level), 
 			agentBonus(A, Level, B), Q is ((Fl + 2) - abs(Cur - Level) + B).
@@ -13,13 +16,15 @@ init module {
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), carPosition(A, Cur), floorCount(A, Fl), moveDir(A, Dir2), not(Dir = Dir2), onRoute(A, Level), 
 			agentBonus(A, Level, B), Q is ((Fl + 1) - abs(Cur - Level) + B).
 			
-		%If a client is leaving a floor, we give FS=1 and plus bonus.
+		%If a client is leaving a floor, we give FS=1 and plus bonus. The bonus is given because if all clients are moving away from a floor we still want to assign the one that has at least some advantage over the others
 		fs(A, Level, Dir, Q) :-  jobsLeft(A, L), not(member(gotoFloor(Level, Dir, _), L)), agent(A), not(me(A)), not(onRoute(A, Level)), 
 			agentBonus(A, Level, B), Q is 1 + B.
 		
 		%Calculate the bonus.
-		%If the elevator is free, we give it defaultbonus or we give it 0. If the elevator is full, we give it full penalty of 1000,or 0.
-		%The client gets more penalty with more job numbers and more bonus with the shorter distance between current floor and best expected floor.
+		%If the elevator is free, we give it defaultbonus or we give it 0. This is because free elevators are always good to assign to any job. 
+		% If the elevator is full, we give it full penalty of 1000, if it's not there's no penalty (or  0 penalty).
+		%The client gets more penalty with more job numbers (to prevent elevators that have a lot of stuff to do to get even more jobs)
+		% There is more bonus with the shorter distance between current floor and best expected floor. This is to apply some sort of static partitioning of the floors.
 		agentBonus(A, Level, B) :- bonus(DefaultBonus), (free(A) -> Bonus = DefaultBonus; Bonus = 0), jobCount(A, Count), elevatorBestFloor(A, BestFloor), 
 			BestFloorDistance is abs(BestFloor - Level), floorCount(A, Fl), elevatorCount(ElevatorCount),
 			(elevatorFull(A) -> FullPenalty = 1000; FullPenalty = 0), 
@@ -76,7 +81,6 @@ init module {
 	}
 	
 	goals{
-		% Something have to be done at first.
 		% Pickup the leading agent so as to listen to fButton events.
 		pickLeadingAgent.
 		% Count the number of elevators.
@@ -121,9 +125,11 @@ main module{
 		forall bel( received(A,capacity(N) )) do delete( received(A,capacity(N)) ) + insert( capacity(A,N) ).
 		forall bel( received(A,floorCount(N) )) do delete(received(A,floorCount(N) )) + insert(floorCount(A,N) ).
 		
-		forall bel( received(A,people(N)), people(A, N2)) do delete( people(A, N2),received(A,people(N)) ) + insert ( people(A, N) ).
+		forall bel( received(A, people(N)), people(A, N2), not(N = N2) ) do delete(people(A, N2)) + delete(received(A,people(N))) + insert (people(A, N)).
+		forall bel( received(A, people(N)), people(A, N)) do delete(received(A, people(N))).
 		
 		forall bel( received(A,carPosition(L) ), carPosition(A,L2), not(L = L2)) do delete(received(A,carPosition(L)), carPosition(A,L2)) + insert(carPosition(A,L) ).
+		forall bel( received(A, carPosition(L)), carPosition(A, L) ) do delete(received(A, carPosition(L))).
 		
 	    % fButtonOn processing (independent of elevator/client)
 	    forall bel( received(A, fButtonOn(Level, Dir)), leadingAgent(A) ) do delete( received(A, fButtonOn(Level, Dir)) ) + insert( fButtonOn(Level, Dir) ) + adopt(sendElevator(Level,Dir)).
@@ -139,6 +145,9 @@ main module{
         forall bel(received(A, jobsLeft(L)), jobsLeft(A, L2), jobsAssignedSinceUpdate(A, N), N = 0, not(L = L2)) do delete(jobsLeft(A, L2), received(A, jobsLeft(L))) + insert(jobsLeft(A, L)).
 		forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), not(N = 0)) do delete(received(A, jobsLeft(L)), jobsAssignedSinceUpdate(A, N)) + insert(jobsAssignedSinceUpdate(A, 0)).
         forall bel(received(A, jobsLeft(L)), jobsLeft(A, L), jobsAssignedSinceUpdate(A, N), N = 0) do delete(received(A, jobsLeft(L))).
+		
+		% Tell the clients that we've finished processing previous requests
+		forall bel(elevator(A)) do send(A, readyForMore).
 		
 	}
 }
