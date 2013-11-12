@@ -23,12 +23,46 @@ Clients decide the order in which they execute their assigned tasks. To do this,
 
 The communication happens in two directions: clients send their current job list and percepts to the manager, and the manager sends tasks to it's clients. Communication does not follow the contract net protocol for optimization reasons. The manager now has all information about the environments and all elevators and uses this information to calculate what would be the bids of each agent in the contract net protocol. The advantage of this is that the manager can use information about some client to influence the bid of another client. For example: the number of elevators is used and bonuses are added for the least busy clients. Of course one could add these bonuses after the bids are calculated within the clients themselves, but then the manager would still need to have all information about the world. It also would require some wait time for all bids to come in, which will decrease the decision making speed. In our opinion the advantages of our simple communication outweigh those of the contract net protocol.
 
-\subsection{Manager}
+The quality is calculated using a modified version of the nearest car algorithm. The basic rule for the nearest car algorithm is to assign the elevator with the highest quality to a certain task. The quality $FS$ is calculated in the following way:
+\begin{itemize}
+ \item If an elevator is moving towards a call, and the call is in the same direction, we get:
+\begin{equation}
+ FS = (N + 2) - d
+\end{equation}
+ Where $N$ is one less than the number of floors in the building, and $d$ is the distance in floors between the elevator and the passenger call.
+ \item For a call in the opposite direction, we have:
+\begin{equation}
+ FS = (N + 1) - d.
+\end{equation}
+ \item In the end if the elevator is moving away from the point of call: 
+ \begin{equation}
+  FS = 1.
+ \end{equation}
+\end{itemize}
+Nearest car was modified using bonuses and penalties to perform better in certain cases. The details of this will be explained in the manager and client descriptions.
 
+
+\subsection{Manager}
+The manager takes environmental information such as the \texttt{carPosition}, \texttt{moveDirection} and current jobs for each elevator, and the status of all \texttt{fButtons}. When a new task appears (an \texttt{fButton} is pressed), it uses the information it has about the environment to determine which client is the best choice for this specific task by nearest car algorithm and then assign the job by sending mail to that client.
+
+In the final algorithm some elements of the fixed sectoring algorithm are used as well. This was done because trial and error showed that, because in most test cases, a lot of floors require service pretty quickly after the environment is started. This means that floors require service before the elevators are divided evenly over the building. The nearest car algorithm 
+
+In the knowledge base of manager, we implements the modified nearest car algorithm. We receive the job list of every client in event module and use it to update the $FS$ values as seeing if any current goals are member of job list. The basic rule for this equation is:
+
+
+
+With this equation we calculate $FS$ value for each agent for each floor and direction, then we may use them to decide which agent shall be chosen when there's a new task.
+
+Besides, we modified the algorithm by adding a bonus-penalty system to improve the performance. For example, if there's a free elevator, we want to make use of them so give it a bonus to make it work again. Full elevators, of course, got a high penalty to prevent it stopping by. To control the workload balance of elevators, we take the current task number as a factor for penalty to assign jobs more evenly.
+
+In the main module, we choose the leading-agent, to which the manager will listen about \texttt{fButton} and \texttt{deleteFButton} events. We choose it to avoid multiple inserting and deleting operations of \texttt{fButton}. Then the manager will check goal base to pick a goal and find the agent with best $FS$ value of the goal, then send goto command to it. There are two situations we care in the end, one is when a elevator leave after finishing picking up people, it will check if the respective \texttt{fButton} is still on(there are still people there), and send another elevator to it if so, and finally we'll check if there are free elevators and assign jobs to keep them working.
 
 \subsection{Clients}
-Clients need to handle several tasks. First of all they need to percepts and process the environment. This is done, as expected in \textsc{goal}, in the event module. The advantage of using the event module for percepts is that every statement in the event module gets executed in each cycle of the agent. This is exactly what we want for percepts like \texttt{fButton}, \texttt{eButton}, \texttt{carPosition}, \texttt{people} and \texttt{atFloor}. Note that only if the percept changes, this is send to the manager. For fButtons, when 
+Clients need to handle several tasks. First of all they need to percepts and process the environment. This is done, as expected in \textsc{goal}, in the event module. The advantage of using the event module for percepts is that every statement in the event module gets executed in each cycle of the agent. This is exactly what we want for percepts like \texttt{fButton}, \texttt{eButton}, \texttt{carPosition}, \texttt{people} and \texttt{atFloor}. Note that only if the percept changes, this is send to the manager. For \texttt{fButtons}, when 
 
+\section{Answers to the questions posed}
+
+\section{Discussion on the usefulness of logic in MAS}
 
 
 
