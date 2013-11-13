@@ -45,10 +45,19 @@ Nearest car was modified using bonuses and penalties to perform better in certai
 \subsection{Manager}
 The manager takes environmental information such as the \texttt{carPosition}, \texttt{moveDirection} and current jobs for each elevator, and the status of all \texttt{fButtons}. When a new task appears (an \texttt{fButton} is pressed), it uses the information it has about the environment to determine which client is the best choice for this specific task. It does this by calculating the $FS$ and adding some bonus $B$. This bonus is determined by applying each of the following rules:
 \begin{itemize}
- \item If the elevator has no jobs it is currently working on, the \texttt{defaultBonus} is added.
- \item The number of jobs as elevator currently has assigned (and not finished yet) is multiplied by $2$ and subtracted.
+ \item If the elevator has no jobs it is currently working on, the \texttt{defaultBonus} is added. The defaultBonus is relatively big so that free elevators get chosen if they are available. This helps make sure that the elevators are always working, which should improve the performance.
+ 
+ \item The number of jobs an elevator currently has assigned to it (and has not finished yet) is multiplied by $2$ and subtracted. This is done to control the workload for each elevator and make sure that the tasks are divided evenly over the elevators.
+ 
  \item If the elevator is full and can therefore not carry any more people, a penalty of $1000$ is subtracted from the bonus. This is a relatively huge number compared to the value of $FS$ and the rest of the bonuses. Therefore the task will always go to an elevator that is not full if such an elevator is available.
- \item 
+ 
+ \item For each elevator, a so-called \emph{best floor} is decided using:
+ \begin{equation}
+  F_\text{best} (e) = \frac{F_\text{total} - 1}{E_\text{total}} \times i(e) - 1
+ \end{equation}
+ In which $F_\text{total}$ is the total number of floors, $E_\text{total}$ is the total number of elevators and $i(e)$ is the index of the current elevator.
+ The distance to this optimal floor
+
 \end{itemize}
 
 
