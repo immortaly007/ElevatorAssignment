@@ -169,7 +169,7 @@ event module{
 		%forall bel(sendDir(Dir) ) do send(manager, dir(Dir) ) + delete(sendDir(Dir) ).
 		forall bel(managerReady, managerBeliefs(carPosition(L)), not(carPosition(L)), carPosition(L2)) do send(manager, carPosition(L2)) +delete(managerBeliefs(carPosition(L))) + insert(managerBeliefs(carPosition(L2))). 
 		forall bel(managerReady, managerBeliefs(people(N)), not(people(N)), people(N2)) do send(manager, people(N2)) + delete(managerBeliefs(people(N))) + insert(managerBeliefs(people(N2))).
-		forall bel(managerReady, managerBeliefs(jobsLeft(L)), not(jobsLeft(L)), jobsLeft(L2)) do send(manager, jobsLeft(L)) + delete(managerBeliefs(jobsLeft(L))) + insert(managerBeliefs(jobsLeft(L2))).
+		forall bel(managerReady, managerBeliefs(jobsLeft(L)), not(jobsLeft(L)), jobsLeft(L2)) do send(manager, jobsLeft(L2)) + delete(managerBeliefs(jobsLeft(L))) + insert(managerBeliefs(jobsLeft(L2))).
 		
 		forall goal(gotoFloor(Level, Dir, e), gotoFloor(Level, Dir2, f), not(Dir = Dir2)) do drop(gotoFloor(Level, Dir, e)) + insert(gotoFloor(Level, Dir2, e)).
 		
