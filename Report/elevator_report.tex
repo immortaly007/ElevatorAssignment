@@ -13,15 +13,15 @@
 \maketitle
 
 \section{Introduction}
-This project concerns a building with a number of elevators. The goal of the project is to implement an algorithm that optimizes the average total time needed to move people to the floors they want to go. We use a modified version of the nearest car algorithm for the agents as the basic rule. The clients (elevators) do some percept work and sends this information to a manager. This manager will apply the algorithm to decide which client should get the job and assign to it.
-The clients themselves choose in which order they want to handle their assigned tasks.
+This project concerns a building with a number of elevators. The goal of the project is to implement an algorithm that optimizes the average total time needed to move people to the floors they want to go. We use a modified version of the nearest car algorithm for the agents as the basic rule. The clients (elevators) do some percept work and send this information to a manager. The manager will apply the nearest car algorithm to decide which client should get the job.
+The clients themselves choose in which order they handle their assigned tasks.
 
 \section{The MAS design}
 The MAS consists of two types of agents: the so-called manager that is responsible for dividing the tasks, and the clients that execute these tasks. The manager is not connected to the environment and therefore communication is used to keep it up to date with the current state of the world. The manager uses this information  to calculate the ``quality'' for each of the clients to take handle service a floor on which people are waiting. The agent with the highest quality is assigned to that task. 
 
-Clients decide the order in which they execute their assigned tasks. To do this, clients use an equation similar to the one the manager uses the calculate the best agent, but they use it to calculate the best floor to visit next. Every time new information is received, the quality for all floors is re-evaluated and the elevator will go to the floor with the highest quality. This way it chooses the optimal path within it's current job list at all times.
+Clients decide the order in which they execute their assigned tasks. To do this, clients use an equation similar to the one the manager uses to calculate the best agent, but they use it to calculate the best floor to visit next. Every time new information is received, the quality for all floors is re-evaluated and the elevator will go to the floor with the highest quality. This way it chooses the optimal path within it's current job list at all times.
 
-The communication happens in two directions: clients send their current job list and percepts to the manager, and the manager sends tasks to it's clients. Communication does not follow the contract net protocol for optimization reasons. The manager now has all information, about the environments and all elevators, and uses this information to calculate what would be the bids of each agent in the contract net protocol. The advantage of this is that the manager can use information about some client to influence the bid of another client. For example: the number of elevators is used and bonuses are added for the least busy clients. Of course one could add these bonuses after the bids are calculated within the clients themselves, but then the manager would still need to have all information about the world. It also would require some wait time for all bids to come in, which will decrease the decision making speed. In our opinion the advantages of our simple communication outweigh those of the contract net protocol.
+The communication happens in two directions: clients send their current job list and percepts to the manager, and the manager sends tasks to it's clients. Communication does not follow the contract net protocol for optimization reasons: The manager now has all information, about the environments and all elevators, and uses this information to calculate what would be the bids of each agent in the contract net protocol. The advantage of this is that the manager can use information about some client to influence the bid of another client. For example: the number of elevators is used and bonuses are added for the least busy clients. Of course, one could add these bonuses after the bids are calculated within the clients themselves, but then the manager would still need to have all information about the world. It also would require some wait time for all bids to come in, which will decrease the decision making speed. In our opinion the advantages of our simple communication outweigh those of the contract net protocol.
 
 The quality is calculated using a modified version of the nearest car algorithm. The basic rule for the nearest car algorithm is to assign the elevator with the highest quality to a certain task. The quality $FS$ is calculated in the following way:
 \begin{itemize}
@@ -53,7 +53,7 @@ The manager takes environmental information such as the \texttt{carPosition}, \t
 \begin{itemize}
  \item If the elevator has no jobs it is currently working on, the \texttt{defaultBonus} is added. The \texttt{defaultBonus} is relatively big so that free elevators get chosen if they are available. This helps make sure that the elevators are always working, which should improve the performance.
  
- \item The number of jobs an elevator currently has assigned to it (and has not finished yet) is multiplied by $2$ and subtracted. This is done to control the workload for each elevator and make sure that the tasks are divided evenly over the elevators.
+ \item The number of jobs an elevator currently has assigned to it (and has not finished yet) is multiplied by $2$ and subtracted from the total bonus. This is done to control the workload for each elevator and make sure that the tasks are divided evenly over the elevators.
  
  \item If the elevator is full and can therefore not carry any more people, a penalty of $1000$ is subtracted from the bonus. This is a relatively huge number compared to the value of $FS$ and the rest of the bonuses. Therefore the task will always go to an elevator that is not full if such an elevator is available.
  
@@ -70,20 +70,20 @@ The manager takes environmental information such as the \texttt{carPosition}, \t
  Using this bonus introduces a simple form of static sectoring. This helps to initially divide the elevators evenly over the building, which helps pick up people more quickly.
 \end{itemize}
 
-In the main module, we choose the so-called leading-agent. This agent is responsible for sending information about pressed buttons. The manager will listen to \texttt{fButton} and \texttt{deleteFButton} events. This is used to improve performance of the manager. 
+In the main module, we choose the so-called leading-agent. This agent is responsible for sending information about pressed buttons. The manager will only listen to \texttt{fButton} and \texttt{deleteFButton} events that are sent from this agent. This is used to improve performance and correctness in the belief base of the manager. 
 
 As soon as an \texttt{fButton} event is received, the manager will try and select the agent with best $FS$ value for that floor and direction. It then sends a \texttt{goto} command to that elevator, containing the floor and direction the elevator needs to service. When an elevator leaves a floor after it has picking up people, the manager will check if the respective \texttt{fButton} is still on. That would mean that there are still people there. If that is the case, another elevator is assigned to that floor to pick those people up.
 
 The manager checks if there are elevators that finished doing all their jobs. If that is the case it will tell that elevator to go to the nearest \texttt{fButton} currently on that still requires service. This will ensure that elevators will not idle and waste time. Note that elevators drop the goal to go to a floor if they percept that the \texttt{fButton} on that floor is no longer pressed.
 
 \subsection{Clients}
-Clients need to handle several tasks. When a client first starts it sends it's static information to the manager (number of floors, capacity). After that it usually receives a \texttt{gotoOnce} to goto a certain floor (the floor that is calculated by the manager to be the best floor).
+Clients need to handle several tasks. When a client first starts, it sends it's static information to the manager (number of floors, capacity). After that it usually receives a \texttt{gotoOnce} to goto a certain floor (the floor that is calculated by the manager to be the best floor).
 
 Clients also need to percept and process the environment. This is done, as expected in \textsc{goal}, in the event module. The advantage of using the event module for percepts is that every statement in the event module gets executed in each cycle of the agent. This is exactly what we want for percepts like \texttt{fButton}, \texttt{eButton}, \texttt{carPosition}, \texttt{people} and \texttt{atFloor}. 
 
-To make sure that the clients don't fill the manager message box faster than the manager can process the messages, clients only send their most recent information to the manager when the manager has notified them that it's ready to receive messages. Note that a message is only send to the manager if it has changed since the last time.
+To make sure that the clients don't fill the managers message box faster than the manager can process the messages, clients only send their most recent information to the manager when the manager has notified them that it's ready to receive messages. Note that a message is only send to the manager if it has changed since the last time.
 
-When the clients receives a \texttt{goto} message from the manager, it will adopt a goal to service that floor and direction. It will also add a goal to service a floor when an \texttt{eButton} is pressed to make sure that floor is serviced as well.
+When the clients receive a \texttt{goto} message from the manager, it will adopt a goal to service that floor and direction. It will also add a goal to service a floor when an \texttt{eButton} is pressed to make sure that floor is serviced as well.
 
 Whenever a \texttt{goto} is received or an elevator finished processing a floor, it will decide where to go next. Clients use an algorithm similar to the nearest car algorithm the manager uses to decide which floor to service next. It calculates an $FS$ value for each floor and direction that currently needs service according to the current goals. The basic $FS$ function as defined in equations \ref{eq:nearest_car1}, \ref{eq:nearest_car2} and \ref{eq:nearest_car3} is used, but the bonuses are calculated quite different from those the manager calculates:
 \begin{itemize}
@@ -94,6 +94,7 @@ Whenever a \texttt{goto} is received or an elevator finished processing a floor,
  \end{equation}
  In which \texttt{Pop} is the number of people currently on the elevator, \texttt{Cap} is the capacity of the elevator and floorCount is the number of floors in the building. This ensures that serving an \texttt{eButton} request is preferred if the elevator is getting full. 
 \end{itemize}
+The floor that has the highest $FS + B$ will be serviced next. 
 
 \subsection{Test results}
 To give an idea of the performance we included some results from tests with different settings. We tested both our agent and the example agent that was included in goal. The first test we did was for 3 cars, 10 levels, and 20 people. This yielded the following results:
@@ -109,7 +110,7 @@ To give an idea of the performance we included some results from tests with diff
   49047 & 96238 & 38958 & 34610 & 88005 & 130848 \\
   41303 & 96688	& 41255 & 34859	& 82558 & 131548 \\
   \hline
-  \textbf{47014} & \textbf{87805} & \textbf{40534} & \textbf{36081} & \textbf{87548} & \textbf{123886}\\  
+  \emph{47014} & \emph{87805} & \emph{40534} & \emph{36081} & \emph{87548} & \emph{123886}\\  
 \hline
 
  \end{tabular}
@@ -119,8 +120,9 @@ To give an idea of the performance we included some results from tests with diff
 
 From these results we can conclude that our algorithm is constantly quicker then the example algorithm included in goal. The difference between the mean of the total times over the five runs is: $123866 - 87548 = 36318$.
 
-Another test we run was a stress test: 23 floors, 6 elevators and 200 people. The results are shown in Table \ref{tbl:6car_23lev_200pop_results}.
-\begin{table}[ht]
+Another test we run was a stress test: 23 floors, 6 elevators and 200 people. The results are shown in Table \ref{tbl:6car_23lev_200pop_results}. From this table we can conclude that again our algorithm provides significant improvements upon the standard algorithm.
+\begin{center}
+ \begin{table}[ht]
  \begin{tabular}{rr|rr|rr}
   \hline
   \multicolumn{2}{c|}{\emph{Avg. Waiting}} & \multicolumn{2}{c|}{\emph{Avg. Travel}} & \multicolumn{2}{c}{\emph{Avg. Total}}\\
@@ -129,31 +131,43 @@ Another test we run was a stress test: 23 floors, 6 elevators and 200 people. Th
    193862 & 262339 & 108632 & 124348 & 302494 & 386688\\
    155873 & 264453 & 110531 & 105663 & 266405 & 370116\\
    176668 & 316600 & 112781 & 140346 & 289450 & 456946\\
-      & 310100 &	& 108303 &	& 418403\\
-      & 242573 &	& 97871  &	& 340444\\
+   152536 & 310100 & 122242 & 108303 & 274778 & 418403\\
+   162534 & 242573 & 127383 & 97871  & 289918 & 340444\\
       
   \hline
-  %\textbf{ } & \textbf{279213 } & \textbf{ } & \textbf{ 115306} & \textbf{ } & \textbf{394519 }\\  
+  \emph{168295} & \emph{279213} & \emph{116314} & \emph{115306} & \emph{284609} & \emph{394519}\\  
 \hline
  \end{tabular}
  \caption{Times for the example algorithm (theirs) and our algorithm (ours). Showing the times of five runs, and the average time of all runs.}
  \label{tbl:6car_23lev_200pop_results}
 \end{table}
+\end{center}
 
 
+\newpage
 \section{Answers to the questions posed}
-Firstly, the elevator will find out atFloor(1) and dir(up) satisfy the a-goal part of rule in main module, and for distance is 0 ,no levels can be nearer than floor 1. After goto(1,up) executed, dir(up) would be inserted into belief base. Then when fButton(9,down) is firstly pressed, the elevator would find onRoute(9,down) false cause dir(down) is false. So "forall bel( fButtonOn(Level, Dir), onRoute(Level, Dir) ) do adopt( atFloor(Level), dir(Dir) )." rule cannot be chosen. However, there's no goal for elevator now, and it's with atFloor(1), percepted fButton(9,down) and doorState(closed) true, which means atFloor(9),dir(down) can be adopted. So all elevators are going to 9th floor.
+\begin{itemize}
+ \item \emph{Why do all elevators move to floor 9 without picking up any people along the way?}\\
+ When the simulation starts, the elevator will percept \texttt{atFloor(1)} and \texttt{dir(up)}, and put this in the believe base. Since there is an initial goal to goto floor 1 with direction up, this will satisfy the \texttt{a-goal} instruction in main module. Since there are currently no other \texttt{fButtons} pressed. 
+ Then, when \texttt{fButton(9,down)} is pressed, the elevator would conclude that \texttt{onRoute(9,down)} is false because \texttt{dir(down)} is false. So the rule "\texttt{forall bel( fButtonOn(Level, Dir), onRoute(Level, Dir) ) do adopt( atFloor(Level), dir(Dir) ).}" cannot be executed. However, there's no goal for elevator now, and it believes \texttt{atFloor(1)} and \texttt{fButton(9,down)} and \texttt{doorState(closed)}. Following the last line in the event module (\texttt{if bel( atFloor(Any) ), not(goal( atFloor(AnyL) )), bel( fButtonOn(L,D), doorState(closed) )
+then adopt( atFloor(L), dir(D) ).}, \texttt{atFloor(9), dir(down)} can be adopted. 
+Because all elevators will percept the same environmental information, they all follow this reasoning, and therefore all elevators are going to 9th floor. 
 
-Besides, the elevators will igonore everyone on the way to 9th floor. Because when they're moving, atFloor(AnyFloor) can never be true, which means onRoute will not be true until they arrive at 9th floor. Nor will the fButton rule in event module and rule in main module be executed. Moreover, in the actionspecification of goto, atFloor(anyFloor) is in the precondition and in this case cannot be true until elevator arrives at 9th floor.
+ The elevators will ignore everyone on the way to 9th floor. Because while they're moving, \texttt{atFloor(AnyFloor)} can never be true, which means \texttt{onRoute} will not be true until they arrive at 9th floor. Nor will the \texttt{fButton} rule in event module and rule in main module be executed. Moreover, in the action specification of \texttt{goto}, \texttt{atFloor(anyFloor)} is in the precondition and in this case cannot be true until elevator arrives at 9th floor.
+ 
+ \item \emph{Why will the elevator indicate it will go down after arriving at the first floor?}\\
+ When a person presses an \texttt{eButton}, a goal will be adopted to go there with the current direction associated to it. Because the elevator just moved to the 9th floor with direction down, the current direction is down, which means \texttt{atFloor(1),dir(down)} will be inserted into goal base. Following the rules in the main module, \texttt{goto(1, down)} will then be executed, so the "down" light will be on when the elevator arrives at the first floor.
+\end{itemize}
 
-In the end, people in the elevator who press eButton will give new goal for agent. For example, if someone wants to goto 1st floor from 9th floor, atFloor(1),dir(down) will be inserted into goal base. The elevator which carries people from 9th floor to 1st floor execute goto(1,down) because according to actionspecification of goto,down means if agent will set current direction down after action is performed, which in this case make sure to agent go in right direction and reach 1st floor. At the same time, dir(down) can also make people on the way to 1st floor who want to go down become onRoute so elevator can stop and pick up them.
 
 \section{Discussion on the usefulness of logic in implementing MAS}
-We found that logic programming was very different than normal programming, which required quite some effort by us, the programmers. However once we got the hang of it, it certainly has it's uses. It was very easy to check if, for example, the elevator is on route to a certain floor using logic. This would have required more code in traditional languages. 
+We found that logic programming was very different from ``normal'' programming. Because of this, logic programming required quite some effort by us, the programmers. However once we got the hang of it, it certainly has it's uses. It was very easy to check if, for example, the elevator is on route to a certain floor using logic. This would have required more code in traditional languages. It's generally a nice way to query a database.
 
-The goals and beliefs were pretty useful as well, especially for debugging. It gives a nice insight into what the agent currently things it should be doing. Checking this list made it possible to identify what goes wrong. 
+The goals and beliefs were pretty useful as well. If the correct information was specified in the belief, knowledge and goal bases, goals would be automatically deleted if they are reached. This means that we didn't have to worry about that. It's also useful for debugging. Looking at the goal and believe bases give a good insight into what the agent currently thinks and should be doing. Checking this list made it possible to identify what goes wrong.  
 
 What we didn't like was the fact that goal bases and belief bases act quite different. For example: the \texttt{findall/3} predicate implemented in prolog works perfectly on the belief base, but does not work on the goal base. This forced us to use goals \texttt{listall} predicate to construct a list of all current goals which could then be send to the manager. 
+
+We also ran into so problems concerning performance: because the agents and manager execute asynchronous, it happens that the agents send more messages then the manager could process, which caused incorrect believes in the manager, and lead to bugs. In one of our earlier implementation to find the best level to go to in a client, this could take quite long and cause all elevators to stop working until one elevator finished calculating the next floor to go to.
 
 
 
