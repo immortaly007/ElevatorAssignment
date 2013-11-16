@@ -17,10 +17,16 @@ init module {
 		fs(Level, Dir, Type, Q) :- Type = f, (elevatorFull -> Penalty = 1000; Penalty = 0), carPosition(Cur), floorCount(Fl), moveDir(Dir2), not(Dir = Dir2), onRoute(Level), Q is ((Fl + 0) - abs(Cur - Level) - Penalty).
 		fs(Level, Dir, Type, Q) :- (elevatorFull, Type = f -> Penalty = 1000; Penalty = 0), not(onRoute(Level)), Q is 1 - Penalty.
 		
-		maxFS([], levelQuality(0, 0)).
-		maxFS([levelQuality(Level, Dir, Q)], levelQuality(Level, Dir, Q)). 
-		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level, Dir, Q)) :- maxFS(T, levelQuality(Level2, Dir2, Q2)), Q >= Q2.
-		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2)) :- maxFS(T, levelQuality(Level2, Dir2, Q2)), Q2 > Q.
+		%maxFS([], levelQuality(0, 0)).
+		%maxFS([levelQuality(Level, Dir, Q)], levelQuality(Level, Dir, Q)). 
+		%maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level, Dir, Q)) :- maxFS(T, levelQuality(Level2, Dir2, Q2)), Q >= Q2.
+		%maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2)) :- maxFS(T, levelQuality(Level2, Dir2, Q2)), Q2 > Q.
+		
+		maxFS([H|T], M) :- maxFS(T, H, M).
+		
+		maxFS([], M, M).
+		maxFS([levelQuality(Level, Dir, Q) | T], levelQuality(Level2, Dir2, Q2), levelQuality(Level3, Dir3, Q3)) :- Max is max(Q, Q2), 
+			(Max = Q2 -> maxFS(T, levelQuality(Level2, Dir2, Q2), levelQuality(Level3, Dir3, Q3));  maxFS(T, levelQuality(Level, Dir, Q), levelQuality(Level3, Dir3, Q3))).  
 		
 		calculateFS([], []).
 		calculateFS([gotoFloor(Level, Dir, Type) | T], [levelQuality(Level, Dir, Q) | T2]) :- calculateFS(T, T2), fs(Level, Dir, Type, Q).
@@ -50,6 +56,8 @@ init module {
 		
 		% Sent
 		sent(moveDir(nothing)).
+		
+		lastJobsLeft([]).
 		
 		people(0).
 		
@@ -91,14 +99,14 @@ main module{
 		
 		if bel( atFloor(L2), moving(L1, L2)) then delete(moving(L1, L2)).
 		%forall bel( atFloor(L)) goal(gotoFloor(L, Dir, e)) do drop( gotoFloor(L, Dir, e)).
-		%if bel( atFloor(L), dir(Dir), gotoFloor(L, Dir, f)) then delete( gotoFloor(L, Dir, f)) + send(manager, pickup(L, Dir)).
+		forall goal-a(gotoFloor(Level, Dir, Type)) do send(manager, pickup(Level, Dir)).
 		
-		if bel(atFloor(L)) then adopt(updatePlan).
+		%if bel(atFloor(L)) then adopt(updatePlan).
 		
 		if goal(updatePlan) then drop(updatePlan) + updatePlan.
 		
 		%if a-goal( atFloor(Level), dir(Dir) ) then goto(Level, Dir).
-		%if goal(atFloor(Level)), bel( findall(levelQuality(Level, Q), 
+		%if goal(atFlofor(Level)), bel( findall(levelQuality(Level, Q), 
 	}
 }
 
@@ -119,6 +127,8 @@ event module{
 		if bel(managerReady) then delete(managerReady).
 		forall bel(received(manager, readyForMore)) do delete(received(manager, readyForMore)) + insert(managerReady).
 		
+		if bel(received(manager, leader)) then insert(leader) + delete(received(manager, leader)).
+		
 		%%%%% Percept Processing %%%%%
 		
 		% Capacity is the number of people that fit in the elevator
@@ -138,21 +148,31 @@ event module{
 		forall bel( atFloor(Level), not(percept(atFloor(Level))) ) do delete( atFloor(Level) ).
 		
 		% For each eButton press adopt goal to go there
-		forall bel( percept(eButtonOn(Level)) ), a-goal(gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do adopt(updatePlan) + adopt(gotoFloor(Level, Dir2, e)). 
-		forall bel( percept(eButtonOn(Level)), dir(Dir)) do adopt(gotoFloor(Level, Dir, e)) + adopt(updatePlan).
+		forall bel( percept(eButtonOn(Level)) ), a-goal(gotoFloor(Level, Dir2, f), not(gotoFloor(Level, Dir2, e) )) do  adopt(gotoFloor(Level, Dir2, e)).% + adopt(updatePlan). 
+		forall bel( percept(eButtonOn(Level)), dir(Dir)) do adopt(gotoFloor(Level, Dir, e)).% + adopt(updatePlan).
 		
 		% The fButton(Level,Dir) percept indicates that the up or down (Dir) button on floor Level has been pressed.
 		% If an fButton stopped being pressed, send the manager that the fButton is no longer pressed
-		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir))) ) do send( manager, delFButtonOn(Level, Dir) )+delete( fButtonOn(Level,Dir) ).
+		forall bel( fButtonOn(Level,Dir), not(percept(fButtonOn(Level,Dir)))) do {
+			if bel(leader) then send( manager, delFButtonOn(Level, Dir) )+delete( fButtonOn(Level,Dir) ).
+			if bel(not(leader)) then delete( fButtonOn(Level,Dir) ).
+		}
 		% If a new fButton is pressed, send it to the manager
-		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir)) ) do send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
+		forall bel( percept(fButtonOn(Level,Dir)), not(fButtonOn(Level,Dir))) do {
+			if bel(leader) then send( manager, fButtonOn(Level,Dir) )+insert( fButtonOn(Level,Dir) ).
+			if bel(not(leader)) then insert(fButtonOn(Level, Dir)).
+		}
+		
+		
 		% If an fButton is no longer pressed, drop the goal to go there
-		forall goal(gotoFloor(Level, Dir, f)), bel(not(percept(fButtonOn(Level,Dir)))) do drop(gotoFloor(Level, Dir, f)) + adopt(updatePlan).
+		forall goal(gotoFloor(Level, Dir, f)), bel(not(fButtonOn(Level,Dir))) do drop(gotoFloor(Level, Dir, f)).% + adopt(updatePlan).
 		
 		%%%%% Message processing %%%%%%%%%
 		
 		% If the manager send any commands, put them in the goal base
-		forall bel(received(manager,goto(L, Dir))) do delete(received(manager,goto(L, Dir))) + adopt(gotoFloor(L, Dir, f)) + adopt(updatePlan).
+		forall bel(received(manager,goto(L, Dir))) do delete(received(manager,goto(L, Dir))) + adopt(gotoFloor(L, Dir, f)).% + adopt(updatePlan).
+		
+		if bel(jobsLeft(L), lastJobsLeft(L2), not(L = L2)) then delete(lastJobsLeft(L2)) + insert(lastJobsLeft(L)).
 		
 		% To calculate the best floor to go to a list is needed of all jobs currently in the goal.
 		% This is done by using listall to find all gotoFloor goals and then copying the result of this list into a new list. 
@@ -161,6 +181,8 @@ event module{
 		listall L <- goal(gotoFloor(A, B, C)) do insert(jobsLeftUgly(L)).
 		if bel(jobsLeftUgly(L), makeNice(L, L2)) then insert(jobsLeft(L2)) + delete(jobsLeftUgly(L)). 
 		if not(goal(gotoFloor(A, B, C))) then insert(jobsLeft([])).
+		
+		if bel(lastJobsLeft(L), not(jobsLeft(L))) then adopt(updatePlan).
 		
 		% The doorState percept is received only if the door state has changed.
 		% So we do not need to check whether the New value is different from the Old value to avoid unnecessary updates.
@@ -175,7 +197,7 @@ event module{
 		
 		forall bel(moveDir(Dir1), sent(moveDir(Dir2)), not(Dir1 = Dir2) ) do send(manager, moveDir(Dir1)) + delete(sent(moveDir(Dir2))).
 		
-		if bel(free), bel(jobsLeft(L)) then send(manager, jobsLeft(L)).
+		%if bel(free), bel(jobsLeft(L)) then send(manager, jobsLeft(L)).
 	
 	}
 }

@@ -102,6 +102,9 @@ main module{
 	program{
 		% Pick up the leading agent to communicate about status of fButtons.
 		if goal(pickLeadingAgent), bel( elevator(A) ) then insert(leadingAgent(A)) + drop(pickLeadingAgent).
+		
+		if bel(leadingAgent(A), not(sent(A, leader))) then sendonce(A, leader).
+		
 		% Enumerate elevators and assign each of them a number.
 		if a-goal(agentsEnumerated), bel( elevator(A), not(elevatorNr(A, _)), elevatorNrs(L), max_list(L, Max), ToAssign is Max + 1 ) then insert(elevatorNr(A, ToAssign)).
 		% Send the elevators to the initial best expected floors.
