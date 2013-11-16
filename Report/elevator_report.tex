@@ -1,8 +1,14 @@
-\documentclass[a4paper,10pt,twocolumn]{article}
+\documentclass[a4paper,11pt,twocolumn]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
+\setlength{\columnsep}{0.3in}
 %\usepackage[margin=1in]{geometry}
+
+
+
+\let\oldtabular\tabular
+\renewcommand{\tabular}{\scriptsize\oldtabular}
 
 %opening
 \title{The \textsc{Goal} Multi-agent Elevator Assignment}
@@ -144,7 +150,8 @@ Another test we run was a stress test: 23 floors, 6 elevators and 200 people. Th
 \end{center}
 
 
-\newpage
+%\newpage
+
 \section{Answers to the questions posed}
 \begin{itemize}
  \item \emph{Why do all elevators move to floor 9 without picking up any people along the way?}\\
@@ -157,6 +164,20 @@ Because all elevators will percept the same environmental information, they all 
  
  \item \emph{Why will the elevator indicate it will go down after arriving at the first floor?}\\
  When a person presses an \texttt{eButton}, a goal will be adopted to go there with the current direction associated to it. Because the elevator just moved to the 9th floor with direction down, the current direction is down, which means \texttt{atFloor(1),dir(down)} will be inserted into goal base. Following the rules in the main module, \texttt{goto(1, down)} will then be executed, so the "down" light will be on when the elevator arrives at the first floor.
+ 
+ \item \emph{Please provides concrete feedback on the \textsc{Goal} system.}\\
+ There were several ``bugs'' we ran into when using goal. Some examples are:
+ \begin{itemize}
+  \item Sometimes, when lots of messages are sent between all elevators, certain mails become undeletable. At one point we paused all elevators and manually checked which mails were believed to be received. We then manually ran the \texttt{delete(received())} command. According to the IDE the mail was deleted succesfully, but querying for the existence of it proved that it was not. These ``ghost'' mails also didn't show up in the mailbox tab in the debugger of the IDE.
+  
+  \item When actions are performed manually while the agent is paused (for example, \texttt{delete(received())}) the \textsc{Goal} IDE stops responding/crashes.
+ \end{itemize}
+ 
+ We also found out that agents aren't actually running in parallel. If one agent is evaluating some Prolog query which takes a long time, all other elevators cannot continue working. Moreover, goal always utilizes only a single core of the CPU. Employing multi-threading on all cores could improve performance.
+ 
+ We also noted that there is no way to find out which Prolog predicates take a long time to evaluate. At some point during the development we found that the clients take a very long time to complete their cycles, but there was no way, other then trying all predicates, to find out which predicate caused the bad performance of the agent. 
+ 
+ Furthermore, the editor in the IDE itself could be vastly improved by adding an auto-complete functionality. We found that many times our agent wouldn't work as expected because a predicate was misspelled somewhere in the knowledge base or program sections. This could have been prevented if the editor contained some auto-complete function when typing. Mistakes like these are really easy to miss when rereading the code for errors 
 \end{itemize}
 
 
@@ -168,6 +189,8 @@ The goals and beliefs were pretty useful as well. If the correct information was
 What we didn't like was the fact that goal bases and belief bases act quite different. For example: the \texttt{findall/3} predicate implemented in prolog works perfectly on the belief base, but does not work on the goal base. This forced us to use goals \texttt{listall} predicate to construct a list of all current goals which could then be send to the manager. 
 
 We also ran into so problems concerning performance: because the agents and manager execute asynchronous, it happens that the agents send more messages then the manager could process, which caused incorrect believes in the manager, and lead to bugs. In one of our earlier implementation to find the best level to go to in a client, this could take quite long and cause all elevators to stop working until one elevator finished calculating the next floor to go to.
+
+
 
 
 
