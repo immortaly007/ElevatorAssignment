@@ -12,7 +12,6 @@ environment {
 }
 
 agentfiles {
-	"elevatoragent.goal" [name=file1] .
 	"cnpmgr.goal" [name=manager] .
 	"elevatorclient.goal" [name=client] .
 }                             
